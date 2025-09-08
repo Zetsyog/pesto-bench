@@ -42,8 +42,12 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
+suffix="pesto"
 if [ "$#" -gt 1 ]; then
     suffix="$2"
+    if [ -z "$suffix" ]; then
+        suffix="pesto"
+    fi
 fi
 
 gen_single_src=0

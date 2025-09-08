@@ -39,7 +39,6 @@ FAILURE_DIR="./failure/pluto_all/$(date +%Y-%m-%d)/"
 mkdir -p "${LOG_DIR}"
 mkdir -p "${FAILURE_DIR}"
 
-CC="gcc-12"
 EXTRA_FLAGS="-lm -DEXTRALARGE_DATASET -DPOLYBENCH_TIME"
 
 PLUTO_FLAGS="--tile --parallel --diamond-tile --nounroll --prevector"
