@@ -31,7 +31,7 @@ FINETUNE_BIN="/home/rossetti/repos/pesto/test/tools/finetune.py"
 
 POLYBENCH_DIR="/home/rossetti/lab/polybench-c-4.2.1-beta/"
 
-ENV_FILE="./env/omp32_noschedule.env"
+ENV_FILE="./env/omp32.env"
 
 LOG_DIR="./results/pluto_all/$(date +%Y-%m-%d)/"
 FAILURE_DIR="./failure/pluto_all/$(date +%Y-%m-%d)/"
