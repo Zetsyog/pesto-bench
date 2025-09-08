@@ -13,7 +13,7 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
-        llvm = pkgs.llvmPackages_18;
+        llvm = pkgs.llvmPackages_16;
 
         ntl = llvm.stdenv.mkDerivation rec {
           pname = "ntl";
@@ -51,6 +51,8 @@
             llvm.clang-tools
             llvm.stdenv
             llvm.clang
+            llvm.libllvm
+            llvm.libclang
             llvm.libcxx
             llvm.bintools
             llvm.clang-manpages
@@ -75,6 +77,8 @@
             libtool
             bison
             flex
+
+            texliveFull
 
             # trahrhe
             ntl

@@ -1,31 +1,32 @@
 # polybench stuff
-export POLYBENCH_VERSION=4.2
-export POLYBENCH_DIR="$(pwd)/polybench"
+if [ -d "polybench/" ]; then
+    export POLYBENCH_DIR="$(realpath "polybench/")"
+else
+    echo "PolyBench directory does not exist. Please run ./fetch_deps.sh to download it."
+    return
+fi
 
 # pesto stuff
-export PESTO_DIR="$(pwd)/pesto"
-export PESTO_BUILD_DIR="${PESTO_DIR}/build"
-export PESTO_GIT="https://gitlab.inria.fr/crossett/pesto.git"
-export PESTO_TAG="dev"
+
+if [ -x "pesto/build/pesto" ]; then
+    export PESTO_BIN="$(realpath "./pesto/build/pesto")"
+else
+    echo "PESTO binary does not exist. Please run ./fetch_deps.sh to build it."
+    return
+fi
 
 # pluto stuff
-export PLUTO_DIR="$(pwd)/pluto"
-export PLUTO_VERSION=0.13.0
-export PLUTO_URL="https://github.com/bondhugula/pluto/releases/download/${PLUTO_VERSION}/pluto-${PLUTO_VERSION}.tgz"
+if [ -x "pluto/polycc" ]; then
+    export PLUTO_BIN="$(realpath "./pluto/polycc")"
+    export POLYCC="$PLUTO_BIN"
+else
+    echo "Pluto binary does not exist. Please run ./fetch_deps.sh to build it."
+    return
+fi
 
-
-echo "Set POLYBENCH_VERSION to ${POLYBENCH_VERSION}"
-echo "Set POLYBENCH_DIR to ${POLYBENCH_DIR}"
-
-echo "Set PESTO_DIR to ${PESTO_DIR}"
-echo "Set PESTO_BUILD_DIR to ${PESTO_BUILD_DIR}"
-echo "Set PESTO_GIT to ${PESTO_GIT}"
-echo "Set PESTO_TAG to ${PESTO_TAG}"
-
-echo "Set PLUTO_DIR to ${PLUTO_DIR}"
-echo "Set PLUTO_VERSION to ${PLUTO_VERSION}"
-echo "Set PLUTO_URL to ${PLUTO_URL}"
-echo ""
-echo "You can now run ./fetch_deps.sh to download and build the dependencies."
-echo ""
-echo "To clean up everything, run ./clean_deps.sh"
+echo "Environment variables set:"
+echo "  POLYBENCH_DIR=$POLYBENCH_DIR"
+echo "  PESTO_BIN=$PESTO_BIN"
+echo "  PLUTO_BIN=$PLUTO_BIN"
+echo "  POLYCC=$POLYCC"
+echo "You can now run scripts/gen_pesto.sh to generate PESTO-instrumented source files."

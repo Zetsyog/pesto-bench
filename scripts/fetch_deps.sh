@@ -5,13 +5,26 @@
 ############################
 # Configuration
 ############################
+POLYBENCH_VERSION=4.2
+POLYBENCH_DIR="$(pwd)/polybench"
 POLYBENCH_URL="https://sourceforge.net/projects/polybench/files/polybench-c-${POLYBENCH_VERSION}.tar.gz/download"
+
+PESTO_DIR="$(pwd)/pesto"
+PESTO_BUILD_DIR="${PESTO_DIR}/build"
+PESTO_GIT="https://gitlab.inria.fr/crossett/pesto.git"
+PESTO_TAG="dev"
+
+PLUTO_DIR="$(pwd)/pluto"
+PLUTO_VERSION=0.13.0
+PLUTO_URL="https://github.com/bondhugula/pluto/releases/download/${PLUTO_VERSION}/pluto-${PLUTO_VERSION}.tgz"
+
+ROOT_DIR="$(pwd)"
 
 ############################
 # Functions
 ############################
 function download_and_extract_polybench() {
-    if [ -d "polybench" ]; then
+    if [ -d "${POLYBENCH_DIR}" ]; then
         echo "PolyBench directory already exists. Skipping download."
         return
     fi
@@ -19,13 +32,19 @@ function download_and_extract_polybench() {
     wget -q "$POLYBENCH_URL" -O polybench.tar.gz
     tar -xzf polybench.tar.gz
     rm polybench.tar.gz
-    mv polybench-c-* polybench
+    mv polybench-c-* "${POLYBENCH_DIR}"
+    echo "Applying patches to PolyBench..."
+    # Apply any necessary patches here
+    (
+        cd "${POLYBENCH_DIR}" || exit
+        patch -p1 <"${ROOT_DIR}/patches/polybench_init_from_data_file.patch"
+    )
     echo "PolyBench downloaded and extracted."
 }
 
 function fetch_pesto() {
-    if [ -d "pesto" ]; then
-        if [ -f "pesto/build/pesto" ]; then
+    if [ -d "${PESTO_DIR}" ]; then
+        if [ -f "${PESTO_BUILD_DIR}/pesto" ]; then
             echo "Pesto already built. Skipping fetch."
             return
         else
@@ -34,11 +53,11 @@ function fetch_pesto() {
         fi
     fi
     git clone "$PESTO_GIT" pesto
-    cd pesto || exit
-    git checkout "$PESTO_COMMIT"
+    cd "${PESTO_DIR}" || exit
+    git checkout "$PESTO_TAG"
     cd ..
     (
-        cd pesto || exit
+        cd "${PESTO_DIR}" || exit
         mkdir build
         cd build || exit
         cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -47,8 +66,8 @@ function fetch_pesto() {
 }
 
 function fetch_pluto() {
-    if [ -d "pluto" ]; then
-        if [ -f "pluto/polycc" ]; then
+    if [ -d "${PLUTO_DIR}" ]; then
+        if [ -f "${PLUTO_DIR}/polycc" ]; then
             echo "Pluto already built. Skipping fetch."
             return
         else
@@ -60,9 +79,9 @@ function fetch_pluto() {
     wget -q "$PLUTO_URL" -O pluto.tar.gz
     tar -xzf pluto.tar.gz
     rm pluto.tar.gz
-    mv pluto-* pluto
+    mv pluto-* "${PLUTO_DIR}"
     (
-        cd pluto || exit
+        cd "${PLUTO_DIR}" || exit
         ./configure
         make -j
     )

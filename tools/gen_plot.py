@@ -52,8 +52,9 @@ class PlotOptions:
 class PlotData:
     """Holds all parsed experiment data."""
 
-    def __init__(self):
+    def __init__(self, options: PlotOptions):
         self.experiments: list[PlotExperiment] = []
+        self.options = options
 
     def global_dict(self) -> list:
         """Convert the data to a dictionary format."""
@@ -92,6 +93,20 @@ class PlotData:
             for instance in exp.best_scores[0].param_instances:
                 dexp[instance[0]] = instance[1]
             data.append(dexp)
+
+        if self.options.polybench_data is not None:
+            # Sort by category and then by benchmark name
+            def sort_key(entry):
+                benchmark_name = entry["benchmark_name"]
+                category = (
+                    self.options.polybench_data[benchmark_name]["category"]
+                    if benchmark_name in self.options.polybench_data
+                    else "unknown"
+                )
+                return (category, benchmark_name)
+
+            data.sort(key=sort_key)
+
         return pd.DataFrame(data)
 
 
@@ -468,7 +483,7 @@ def main():
 
     options = options_from_args(parse_args())
 
-    data = PlotData()
+    data = PlotData(options)
 
     data_parser = ExpParser(options)
     for input_file in options.input_files:

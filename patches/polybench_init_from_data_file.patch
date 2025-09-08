@@ -1,0 +1,70 @@
+diff --git a/linear-algebra/solvers/cholesky/cholesky.c b/linear-algebra/solvers/cholesky/cholesky.c
+index 4fdb72b..32c6732 100644
+--- a/linear-algebra/solvers/cholesky/cholesky.c
++++ b/linear-algebra/solvers/cholesky/cholesky.c
+@@ -114,8 +114,28 @@ int main(int argc, char** argv)
+   /* Variable declaration/allocation. */
+   POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N, n, n);
+ 
+-  /* Initialize array(s). */
+-  init_array (n, POLYBENCH_ARRAY(A));
++#ifdef READ_FROM_INPUT_FILE
++#define STRINGIFY(x) #x
++#define STRINGIFY_VALUE_OF(x) STRINGIFY(x)
++	FILE *in = fopen(STRINGIFY_VALUE_OF(READ_FROM_INPUT_FILE), "rb");
++	if (in == NULL) {
++		fprintf(stderr, "Error: failed to open file %s\n", STRINGIFY_VALUE_OF(READ_FROM_INPUT_FILE));
++		exit(1);
++	}
++	if (fread(A, sizeof(DATA_TYPE), _PB_N * _PB_N, in) != _PB_N * _PB_N) {
++		fprintf(stderr, "Error: failed to read matrix A\n");
++		exit(1);
++	}
++	fclose(in);
++#else
++	/* Initialize array(s). */
++	init_array(n, POLYBENCH_ARRAY(A));
++#endif
++#ifdef STORE_IN_ARRAY
++	FILE *f = fopen("input.dump", "wb");
++	fwrite(A, sizeof(DATA_TYPE), _PB_N * _PB_N, f);
++	fclose(f);
++#endif
+ 
+   /* Start timer. */
+   polybench_start_instruments;
+diff --git a/linear-algebra/solvers/lu/lu.c b/linear-algebra/solvers/lu/lu.c
+index 9b01cd4..7cd34a7 100644
+--- a/linear-algebra/solvers/lu/lu.c
++++ b/linear-algebra/solvers/lu/lu.c
+@@ -112,8 +112,28 @@ int main(int argc, char** argv)
+   /* Variable declaration/allocation. */
+   POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, N, N, n, n);
+ 
+-  /* Initialize array(s). */
+-  init_array (n, POLYBENCH_ARRAY(A));
++#ifdef READ_FROM_INPUT_FILE
++#define STRINGIFY(x) #x
++#define STRINGIFY_VALUE_OF(x) STRINGIFY(x)
++	FILE *in = fopen(STRINGIFY_VALUE_OF(READ_FROM_INPUT_FILE), "rb");
++	if (in == NULL) {
++		fprintf(stderr, "Error: failed to open file %s\n", STRINGIFY_VALUE_OF(READ_FROM_INPUT_FILE));
++		exit(1);
++	}
++	if (fread(A, sizeof(DATA_TYPE), _PB_N * _PB_N, in) != _PB_N * _PB_N) {
++		fprintf(stderr, "Error: failed to read matrix A\n");
++		exit(1);
++	}
++	fclose(in);
++#else
++	/* Initialize array(s). */
++	init_array(n, POLYBENCH_ARRAY(A));
++#endif
++#ifdef STORE_IN_ARRAY
++	FILE *f = fopen("input.dump", "wb");
++	fwrite(A, sizeof(DATA_TYPE), _PB_N * _PB_N, f);
++	fclose(f);
++#endif
+ 
+   /* Start timer. */
+   polybench_start_instruments;
