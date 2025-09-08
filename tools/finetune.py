@@ -610,7 +610,7 @@ class FTOptions:
         except subprocess.CalledProcessError as e:
             logger.error("Failed to get compiler version: %s", e)
         logger.log(level, "\tCompiler cflags: %s", self.compiler_cflags)
-        logger.log(level, "\tCompile extra flags: %s", self.compiler_extra_flags)
+        logger.log(level, "\tCompiler extra flags: %s", self.compiler_extra_flags)
         logger.log(level, "\tParameters:")
         for param in self.parameters:
             if isinstance(param, FTParameterRange):

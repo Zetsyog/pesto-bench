@@ -1,0 +1,32 @@
+{
+    "options": {
+        "input-format": "c"
+    },
+    "passes": [
+        {
+            "uuid": "pluto",
+            "options": {
+                "tile": true,
+                "parallel": true,
+                "prevector": true,
+                "intratileopt": true
+            }
+        },
+        {
+            "uuid": "param-tiling",
+            "gen-trahrhe": true,
+            "trahrhe-use-dichotomy": true,
+            "types": [
+                "algebraic",
+                "rectangular"
+            ]
+        },
+        {
+            "uuid": "clast-custom-vec-pragma",
+            "pragma": "GCC ivdep"
+        },
+        {
+            "uuid": "codegen-cloog"
+        }
+    ]
+}

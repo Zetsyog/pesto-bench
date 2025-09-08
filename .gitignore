@@ -5,5 +5,5 @@ pesto/
 .vscode
 .direnv
 .envrc
-*.env
 flake.lock
+sample/

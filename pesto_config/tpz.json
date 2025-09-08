@@ -1,0 +1,31 @@
+{
+    "passes": [
+        {
+            "uuid": "pluto",
+            "options": {
+                "tile": true,
+                "parallel": true,
+                "innerpar": false,
+                "multipar": false,
+                "silent": false,
+                "diamondtile": true,
+                "intratileopt": true,
+                "tile-sizes": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "find-tile-sizes": false,
+                "identity": false
+            }
+        },
+        {
+            "uuid": "isl-tpz-tiling"
+        },
+        {
+            "uuid": "codegen-cloog",
+            "optFirstLevel": 8
+        }
+    ]
+}
