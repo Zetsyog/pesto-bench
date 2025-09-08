@@ -24,6 +24,16 @@ else
     return
 fi
 
+# find a compiler
+if command -v gcc >/dev/null 2>&1; then
+    export CC=gcc
+elif command -v clang >/dev/null 2>&1; then
+    export CC=clang
+else
+    echo "No suitable C compiler found (gcc or clang). Please install one."
+    return
+fi
+
 echo "Environment variables set:"
 echo "  POLYBENCH_DIR=$POLYBENCH_DIR"
 echo "  PESTO_BIN=$PESTO_BIN"

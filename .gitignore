@@ -1,6 +1,7 @@
 polybench/
 pluto/
 pesto/
+pb_data/
 
 .vscode
 .direnv

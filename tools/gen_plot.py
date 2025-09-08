@@ -13,6 +13,8 @@ import seaborn as sns
 import pandas as pd
 from pprint import pprint
 import json
+import matplotlib.pyplot as plt
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,6 +49,9 @@ class PlotOptions:
         self.polybench_data: PolybenchData | None = None
         self.polybench_dataset: str | None = None
         self.ylogscale: bool = False
+        self.output: pathlib.Path = pathlib.Path("output.pdf")
+        self.exclude_list: list[str] = []
+        self.filter_list: list[str] = []
 
 
 class PlotData:
@@ -455,6 +460,28 @@ def parse_args() -> argparse.Namespace:
         default=False,
     )
 
+    parser.add_argument(
+        "-o", "--output", help="Output file", type=pathlib.Path, default=None
+    )
+
+    parser.add_argument(
+        "--exclude",
+        nargs="+",
+        help="List of benchmark names to exclude",
+        type=str,
+        dest="exclude_list",
+        default=[],
+    )
+
+    parser.add_argument(
+        "--filter",
+        nargs="+",
+        help="List of benchmark names to include (if specified, only these will be included)",
+        type=str,
+        dest="filter_list",
+        default=[],
+    )
+
     return parser.parse_args()
 
 
@@ -473,6 +500,12 @@ def options_from_args(args: argparse.Namespace) -> PlotOptions:
         options.metric = "flops"
     if args.ylogscale:
         options.ylogscale = True
+    if args.output:
+        options.output = args.output
+
+    options.exclude_list = args.exclude_list
+    options.filter_list = args.filter_list
+
     return options
 
 
@@ -489,8 +522,12 @@ def main():
     for input_file in options.input_files:
         logger.info("parsing %s", input_file)
         exp = data_parser.parse(pathlib.Path(input_file))
-        if not exp.has_error:
-            data.experiments.append(exp)
+        if not exp.has_error and exp.benchmark_name not in options.exclude_list:
+            if (
+                len(options.filter_list) == 0
+                or exp.benchmark_name in options.filter_list
+            ):
+                data.experiments.append(exp)
 
     logger.info("Finished processing all input files.")
 
@@ -498,12 +535,12 @@ def main():
     print(df)
 
     sns.set_theme()
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(15, 6))
     ydata = "best_score"
     if options.metric == "flops":
         ydata = "Mflops"
     sns.barplot(data=df, x="benchmark_name", y=ydata, hue="tags")
-
-    import matplotlib.pyplot as plt
 
     plt.xticks(rotation=45)
     if options.ylogscale:
@@ -511,7 +548,7 @@ def main():
     plt.minorticks_on()
     plt.grid(which="minor", linestyle=":", linewidth="0.5", color="gray", axis="y")
     plt.grid(which="major", linestyle="-", linewidth="0.75", color="black", axis="y")
-    plt.show()
+    plt.savefig(options.output, bbox_inches="tight", dpi=300)
 
 
 if __name__ == "__main__":
