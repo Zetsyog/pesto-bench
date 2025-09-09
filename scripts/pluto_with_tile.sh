@@ -2,7 +2,7 @@
 
 PLUTO_OPT="--tile --parallel --diamond-tile --nounroll --prevector"
 CFLAGS="-march=native -O3 -fopenmp"
-EXTRA_FLAGS="${EXTRA_FLAGS} -lm -DEXRALARGE_DATASET -DPOLYBENCH_TIME"
+EXTRA_FLAGS="${EXTRA_FLAGS} -lm -DEXTRALARGE_DATASET -DPOLYBENCH_TIME"
 
 if [ -z "$PLUTO_BIN" ]; then
     echo "PLUTO_BIN not set, please source an env file."
