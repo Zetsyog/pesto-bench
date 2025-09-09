@@ -30,11 +30,19 @@ if [ $? -ne 0 ]; then
 fi
 rm -f *.cloog tile.sizes
 
+# replace #pragma ivdep
+sed -i 's/#pragma ivdep/#pragma GCC ivdep/' "$1"
+# remove #pragma vector always
+sed -i 's/#pragma vector always//' "$1"
+
 $CC $CFLAGS "${POLYBENCH_DIR}/utilities/polybench.c" -I "${POLYBENCH_DIR}/utilities/" -I "$(dirname "$1")" __tmp.c -o __tmp.out $EXTRA_FLAGS
 if [ $? -ne 0 ]; then
     echo "Compilation failed"
     exit 1
 fi
 
-./__tmp.out
+for i in {1..5}; do
+    echo "Run #$i"
+    ./__tmp.out
+done
 rm -f __tmp.c __tmp.out
