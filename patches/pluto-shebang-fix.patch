@@ -1,0 +1,16 @@
+--- ./polycc.orig.sh.in	2025-09-09 14:20:05.870437807 +0200
++++ ./polycc.sh.in	2025-09-09 14:20:27.763392524 +0200
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/usr/bin/env bash
+ #
+ # Top-level script that runs all components of the end-to-end
+ # system
+--- ./inscop.orig	2025-09-09 14:21:16.244213117 +0200
++++ ./inscop	2025-09-09 14:21:27.666773831 +0200
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/usr/bin/env bash
+ 
+ # arguments
+ # inscop <original> <transformed_kernel> <output_file>

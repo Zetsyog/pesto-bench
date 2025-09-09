@@ -82,6 +82,7 @@ function fetch_pluto() {
     mv pluto-* "${PLUTO_DIR}"
     (
         cd "${PLUTO_DIR}" || exit
+        patch -p1 <"${ROOT_DIR}/patches/pluto-shebang-fix.patch"
         ./configure
         make -j
     )
