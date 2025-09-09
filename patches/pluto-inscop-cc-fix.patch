@@ -1,0 +1,14 @@
+--- inscop.orig	2025-09-09 14:28:21.304461048 +0200
++++ inscop	2025-09-09 14:28:57.656388496 +0200
+@@ -7,7 +7,10 @@
+ # This file is available under the MIT license. Please see LICENSE in the
+ # top-level directory for details.
+ #
+-CC=gcc
++if [ -z "$CC" ]; then
++	CC=gcc
++fi
++
+ 
+ MAXLINES=`wc -l $1 | awk '{print $1}'`
+ 

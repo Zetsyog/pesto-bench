@@ -83,6 +83,7 @@ function fetch_pluto() {
     (
         cd "${PLUTO_DIR}" || exit
         patch -p1 <"${ROOT_DIR}/patches/pluto-shebang-fix.patch"
+        patch -p1 <"${ROOT_DIR}/patches/pluto-inscop-cc-fix.patch"
         ./configure
         make -j
     )
