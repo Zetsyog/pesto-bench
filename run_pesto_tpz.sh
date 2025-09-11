@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 
 ALL_BENCHMARKS=(
-    # "stencils/adi"
-    # "stencils/fdtd-2d"
+    "stencils/adi"
+    "stencils/fdtd-2d"
     "stencils/heat-3d"
-    # "stencils/jacobi-1d"
-    # "stencils/jacobi-2d"
-    # "stencils/seidel-2d"
+    "stencils/jacobi-1d"
+    "stencils/jacobi-2d"
+    "stencils/seidel-2d"
 )
 
-FINETUNE_BIN="/home/rossetti/repos/pesto/test/tools/finetune.py"
+FINETUNE_BIN="./tools/finetune.py"
 
+if [ -z "$POLYBENCH_DIR" ]; then
+    echo "Please set POLYBENCH_DIR environment variable to point to the PolyBench directory."
+    exit 1
+fi
+if [ ! -d "$POLYBENCH_DIR" ]; then
+    echo "POLYBENCH_DIR ($POLYBENCH_DIR) is not a valid directory."
+    exit 1
+fi
+if [ -z "$CC" ]; then
+    echo "CC is not set, defaulting to gcc"
+    CC="gcc"
+fi
 LOG_DIR="results/pesto_tpz/$(date +%Y-%m-%d)/"
 FAILURE_DIR="failure/pesto_tpz/$(date +%Y-%m-%d)"
 ENV_FILE="./omp32_spread.env"

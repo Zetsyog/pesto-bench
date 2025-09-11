@@ -6,7 +6,7 @@ ALL_BENCHMARKS=(
     "linear-algebra/blas/gemm"
     "linear-algebra/blas/gemver"
     "linear-algebra/blas/gesummv"
-    "linear-algebra/blas/symm"
+    # "linear-algebra/blas/symm"
     "linear-algebra/blas/syr2k"
     "linear-algebra/blas/syrk"
     "linear-algebra/blas/trmm"
@@ -27,7 +27,20 @@ ALL_BENCHMARKS=(
     # "stencils/seidel-2d"
 )
 
-FINETUNE_BIN="/home/rossetti/repos/pesto/test/tools/finetune.py"
+FINETUNE_BIN="./tools/finetune.py"
+
+if [ -z "$POLYBENCH_DIR" ]; then
+    echo "Please set POLYBENCH_DIR environment variable to point to the PolyBench directory."
+    exit 1
+fi
+if [ ! -d "$POLYBENCH_DIR" ]; then
+    echo "POLYBENCH_DIR ($POLYBENCH_DIR) is not a valid directory."
+    exit 1
+fi
+if [ -z "$CC" ]; then
+    echo "CC is not set, defaulting to gcc"
+    CC="gcc"
+fi
 
 LOG_DIR="results/pesto/$(date +%Y-%m-%d)/"
 FAILURE_DIR="failure/pesto/$(date +%Y-%m-%d)"
@@ -38,7 +51,6 @@ mkdir -p "${FAILURE_DIR}"
 LOG_SUFFIX="pesto"
 SRC_SUFFIX="pesto"
 
-CC="gcc-12"
 EXTRA_FLAGS="-lm -DEXTRALARGE_DATASET -DPOLYBENCH_TIME"
 
 for benchmark in "${ALL_BENCHMARKS[@]}"; do

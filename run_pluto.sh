@@ -1,35 +1,54 @@
 #!/usr/bin/env bash
 
 ALL_BENCHMARKS=(
-    # "datamining/correlation"
-    # "datamining/covariance"
-    # "linear-algebra/blas/gemm"
-    # "linear-algebra/blas/gemver"
-    # "linear-algebra/blas/gesummv"
+    "datamining/correlation"
+    "datamining/covariance"
+    "linear-algebra/blas/gemm"
+    "linear-algebra/blas/gemver"
+    "linear-algebra/blas/gesummv"
     # "linear-algebra/blas/symm"
-    # "linear-algebra/blas/syr2k"
-    # "linear-algebra/blas/syrk"
-    # "linear-algebra/blas/trmm"
-    # "linear-algebra/kernels/2mm"
-    # "linear-algebra/kernels/3mm"
-    # "linear-algebra/kernels/atax"
-    # "linear-algebra/kernels/bicg"
-    # "linear-algebra/kernels/doitgen"
-    # "linear-algebra/kernels/mvt"
-    # "linear-algebra/solvers/cholesky"
-    # "linear-algebra/solvers/gramschmidt"
-    # "linear-algebra/solvers/lu"
-    # "stencils/adi"
-    # "stencils/fdtd-2d"
+    "linear-algebra/blas/syr2k"
+    "linear-algebra/blas/syrk"
+    "linear-algebra/blas/trmm"
+    "linear-algebra/kernels/2mm"
+    "linear-algebra/kernels/3mm"
+    "linear-algebra/kernels/atax"
+    "linear-algebra/kernels/bicg"
+    "linear-algebra/kernels/doitgen"
+    "linear-algebra/kernels/mvt"
+    "linear-algebra/solvers/cholesky"
+    "linear-algebra/solvers/gramschmidt"
+    "linear-algebra/solvers/lu"
+    "stencils/adi"
+    "stencils/fdtd-2d"
     "stencils/heat-3d"
-    # "stencils/jacobi-1d"
-    # "stencils/jacobi-2d"
-    # "stencils/seidel-2d"
+    "stencils/jacobi-1d"
+    "stencils/jacobi-2d"
+    "stencils/seidel-2d"
 )
 
-FINETUNE_BIN="/home/rossetti/repos/pesto/test/tools/finetune.py"
+FINETUNE_BIN="./tools/finetune.py"
 
-POLYBENCH_DIR="/home/rossetti/lab/polybench-c-4.2.1-beta/"
+if [ -z "$POLYBENCH_DIR" ]; then
+    echo "Please set POLYBENCH_DIR environment variable to point to the PolyBench directory."
+    exit 1
+fi
+if [ ! -d "$POLYBENCH_DIR" ]; then
+    echo "POLYBENCH_DIR ($POLYBENCH_DIR) is not a valid directory."
+    exit 1
+fi
+if [ -z "$PLUTO_BIN" ]; then
+    echo "Please set PLUTO_BIN environment variable to point to the Pluto binary."
+    exit 1
+fi
+if [ ! -x "$PLUTO_BIN" ]; then
+    echo "PLUTO_BIN ($PLUTO_BIN) is not a valid executable."
+    exit 1
+fi
+if [ -z "$CC" ]; then
+    echo "CC is not set, defaulting to gcc"
+    CC="gcc"
+fi
 
 ENV_FILE="./env/omp32.env"
 
@@ -42,7 +61,6 @@ mkdir -p "${FAILURE_DIR}"
 EXTRA_FLAGS="-lm -DEXTRALARGE_DATASET -DPOLYBENCH_TIME"
 
 PLUTO_FLAGS="--tile --parallel --diamond-tile --nounroll --prevector"
-PLUTO_BIN="/home/rossetti/repos/pluto-0.12.0/polycc"
 PLUTO_VEC_PRAGMA="#pragma GCC ivdep"
 
 mkdir -p "${FAILURE_DIR}/static/"
