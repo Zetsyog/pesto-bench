@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
 PLUTO_OPT="--tile --parallel --diamond-tile --nounroll --prevector"
-CFLAGS="-march=native -O3 -fopenmp"
-EXTRA_FLAGS="${EXTRA_FLAGS} -lm -DEXTRALARGE_DATASET -DPOLYBENCH_TIME"
 
 if [ -z "$PLUTO_BIN" ]; then
     echo "PLUTO_BIN not set, please source an env file."
@@ -17,13 +15,18 @@ if [ -z "$POLYBENCH_DIR" ]; then
     exit 1
 fi
 
+if [ "$#" -lt 3 ]; then
+    echo "Usage: $0 <source_file> <output_file> [<tile_size1> <tile_size2> ...]"
+    exit 1
+fi
+
 # write all arguments except first one to tile.sizes file
-printf "%s\n" "${@:2}" >tile.sizes
+printf "%s\n" "${@:3}" >tile.sizes
 
 echo "PLUTO_OPT: $PLUTO_OPT"
 echo "PLUTO_BIN: $PLUTO_BIN"
 
-$PLUTO_BIN $PLUTO_OPT "$1" -o "__tmp.c"
+$PLUTO_BIN $PLUTO_OPT "$1" -o "$2"
 if [ $? -ne 0 ]; then
     echo "Pluto failed"
     exit 1
@@ -34,15 +37,3 @@ rm -f *.cloog tile.sizes
 sed -i 's/#pragma ivdep/#pragma GCC ivdep/' "$1"
 # remove #pragma vector always
 sed -i 's/#pragma vector always//' "$1"
-
-$CC $CFLAGS "${POLYBENCH_DIR}/utilities/polybench.c" -I "${POLYBENCH_DIR}/utilities/" -I "$(dirname "$1")" __tmp.c -o __tmp.out $EXTRA_FLAGS
-if [ $? -ne 0 ]; then
-    echo "Compilation failed"
-    exit 1
-fi
-
-for i in {1..5}; do
-    echo "Run #$i"
-    ./__tmp.out
-done
-rm -f __tmp.c __tmp.out
