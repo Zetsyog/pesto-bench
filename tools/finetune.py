@@ -1,13 +1,16 @@
+# pylint: disable=too-many-lines
+"""Finetune parameters for a benchmark to find best performance."""
+
 import sys
 import argparse
 import bisect
 import subprocess
+import itertools
 import logging
 import shutil
-import itertools
-import statistics
 import hashlib
 import os
+import statistics
 
 from pathlib import Path
 from collections.abc import Iterator
@@ -44,6 +47,7 @@ class FTParameter:
 
     def __init__(self, name: str):
         self.name = name
+        self.dynamic: bool = False
 
 
 class FTParameterRange(FTParameter):
@@ -63,6 +67,11 @@ class FTParameterRange(FTParameter):
         self.pow2 = pow2
         self.step = step
 
+    def __str__(self):
+        if self.pow2:
+            return f"{self.name}:\t[{self.min_value}, {self.max_value}]pow2"
+        return f"{self.name}:\t[{self.min_value}, {self.max_value}, {self.step}]"
+
 
 class FTParameterList(FTParameter):
     """Parameter that has a list of discrete values to search for."""
@@ -71,16 +80,36 @@ class FTParameterList(FTParameter):
         super().__init__(name)
         self.values = values
 
+    def __str__(self):
+        return f"{self.name}:\t{{{', '.join(str(v) for v in self.values)}}}"
+
 
 class FTParameterMinimize(FTParameter):
     """Parameter that the experiment will try to minimize."""
 
     def __init__(self, name: str, min_value: int):
         super().__init__(name)
+        self.dynamic = True
         self.init_value = min_value
         self.step = self.init_value // 10
         if self.step < 1:
             self.step = 1
+
+    def __str__(self):
+        return f"{self.name}:\t<{self.init_value}"
+
+
+class FTParameterDynVol(FTParameter):
+    """Parameter for tile volume"""
+
+    def __init__(self, name: str, init_value: int = 1, max_value: int = 1000000):
+        super().__init__(name)
+        self.dynamic = True
+        self.init_value = init_value
+        self.max_value = max_value
+
+    def __str__(self):
+        return f"{self.name}:\tdyn[tpz_vol, {self.init_value}]"
 
 
 class FTParamInstance:
@@ -208,17 +237,6 @@ class FTOptions:
         )
 
         parser.add_argument(
-            "--param-minimize",
-            action="append",
-            nargs=2,
-            default=[],
-            type=str,
-            metavar=("NAME", "INIT_VALUE"),
-            dest="param_minimize",
-            help="Parameters to minimize during the search. ",
-        )
-
-        parser.add_argument(
             "--compiler-extra-flags",
             action="extend",
             nargs="+",
@@ -311,7 +329,6 @@ class FTOptions:
         # for now we only support range parameters
 
         # check if string contains exactly one [ and one ]
-
         if expr.startswith("[") and expr.endswith("]"):
             if not (expr.count("[") == 1 and expr.count("]") == 1):
                 return None
@@ -352,6 +369,7 @@ class FTOptions:
                 return None
 
             list_part = expr[1:-1].strip()
+            # check if the list part contains a comma
             list_parts = list_part.split(",")
             if len(list_parts) < 1:
                 return None
@@ -364,6 +382,41 @@ class FTOptions:
                 return None
 
             return FTParameterList(name, values)
+        if expr.startswith("dyn"):
+            if not (expr.count("[") == 1 and expr.count("]") == 1):
+                return None
+            range_part = expr[4:-1].strip()
+            range_parts = range_part.split(",")
+            if len(range_parts) < 1:
+                logger.error("Dynamic parameter requires at least one argument")
+                return None
+            dyn_type = range_parts[0]
+            if dyn_type.strip() == "min" and len(range_parts) == 2:
+                try:
+                    min_value = int(range_parts[1].strip())
+                    if min_value <= 0:
+                        raise ValueError("min_value must be greater than 0")
+                except ValueError as e:
+                    logger.error("Invalid dynamic parameter: %s", e)
+                    return None
+                return FTParameterMinimize(name, min_value)
+            if dyn_type.strip() == "tpz_vol" and len(range_parts) <= 3:
+                param = FTParameterDynVol(name)
+                try:
+                    if len(range_parts) >= 2:
+                        param.init_value = int(range_parts[1].strip())
+                        if param.init_value <= 0:
+                            raise ValueError("init_value must be greater than 0")
+                    if len(range_parts) >= 3:
+                        param.max_value = int(range_parts[2].strip())
+                        if param.max_value <= param.init_value:
+                            raise ValueError(
+                                "max_value must be greater than init_value"
+                            )
+                except ValueError as e:
+                    logger.error("Invalid dynamic parameter: %s", e)
+                    return None
+                return param
         return None
 
     def parse(self) -> None:
@@ -394,28 +447,12 @@ class FTOptions:
                     "Invalid parameter expression for parameter %s: '%s'", name, expr
                 )
                 sys.exit(1)
+
             self.parameters.append(parsed_param)
 
-        if len(ns.param_minimize) > 1:
-            logger.error(
-                "Only one parameter can be minimized at a time. "
-                "Multiple minimizing parameters are not supported yet."
-            )
+        if len([p for p in self.parameters if p.dynamic]) > 1:
+            logger.error("Only one dynamic parameter is supported.")
             sys.exit(1)
-        for param in ns.param_minimize:
-            name, min_value = param
-            try:
-                min_value = int(min_value)
-            except ValueError as e:
-                logger.error("Invalid parameter minimize: %s", e)
-                sys.exit(1)
-
-            # check if a parameter with the same name already exists
-            if any(p.name == name for p in self.parameters):
-                logger.error("Parameter '%s' is already defined.", name)
-                sys.exit(1)
-
-            self.parameters.append(FTParameterMinimize(name, min_value))
 
         if ns.include_dirs:
             for include_dir in ns.include_dirs:
@@ -610,20 +647,7 @@ class FTOptions:
         logger.log(level, "\tCompiler extra flags: %s", self.compiler_extra_flags)
         logger.log(level, "\tParameters:")
         for param in self.parameters:
-            if isinstance(param, FTParameterRange):
-                logger.log(
-                    level,
-                    "\t\t%s:\t%s[%d, %d]%s",
-                    param.name,
-                    "pow2 " if param.pow2 else "",
-                    param.min_value,
-                    param.max_value,
-                    f" step {param.step}" if not param.pow2 else "",
-                )
-            elif isinstance(param, FTParameterMinimize):
-                logger.log(level, "\t\t%s:\t<%d", param.name, param.init_value)
-            else:
-                logger.log(level, "\t\t%s", param.name)
+            logger.log(level, "\t\t%s", param)
 
         logger.log(level, "\tPluto: %s", self.pluto_enabled)
         logger.log(level, "\tPluto binary: %s", self.pluto_bin)
@@ -694,7 +718,7 @@ class FTRun:
         self.exit_code = None
         self.kernel_execution_time = None
 
-        result = subprocess.Popen(
+        proc = subprocess.Popen(
             [self.command],
             stdout=subprocess.PIPE,
             stderr=self.stderr_fd if self.stderr_fd else subprocess.PIPE,
@@ -703,9 +727,9 @@ class FTRun:
             restore_signals=False,
         )
         try:
-            stdout, _ = result.communicate(timeout=timeout)
+            stdout, _ = proc.communicate(timeout=timeout)
 
-            self.exit_code = result.returncode
+            self.exit_code = proc.returncode
 
             # parse the output to extract kernel execution time
             for line in stdout.splitlines():
@@ -716,7 +740,11 @@ class FTRun:
                     self.kernel_execution_time = None
 
         except subprocess.TimeoutExpired:
+            assert timeout is not None
+            proc.kill()
+            proc.wait()
             self.exit_code = -1
+            self.kernel_execution_time = float(timeout)
             self.error_message = "Timeout expired"
         except subprocess.SubprocessError as e:
             logger.error("Failed to run binary: %s", e)
@@ -737,6 +765,30 @@ class FTRun:
         return (
             self.exit_code is not None and self.exit_code != 0
         ) or self.kernel_execution_time is None
+
+    def log_result(self, logger_instance: logging.Logger) -> None:
+        """Log the result of the run."""
+        score_str = ""
+        # Log the result
+        if self.has_error():
+            # If the run has an error, we log it as N/A
+            score_str += "N/A"
+            if self.error_message:
+                if self.error_message == "Timeout expired":
+                    score_str = f"{self.kernel_execution_time:.2f}"
+                score_str += f" ({self.error_message})"
+            elif self.exit_code is not None:
+                # If there is an exit code, we log it
+                score_str += f" (exit code: {self.exit_code})"
+        else:  # valid run with execution time
+            # add execution time to log
+            score_str += f"{self.kernel_execution_time:.6f}"
+
+        logger_instance.info(
+            "\t%s%s",
+            " ".join(f"{str(p.value)[:15]:<15}" for p in self.params),
+            score_str,
+        )
 
 
 class FTTransformSourceBundle(NamedTuple):
@@ -1156,10 +1208,8 @@ class FTExperiment:
 
         param_product_list: list[list[FTParamInstance]] = []
 
-        nonminimize_params = [
-            p for p in param_list if not isinstance(p, FTParameterMinimize)
-        ]
-        for param in nonminimize_params:
+        nondyn_parameters = [p for p in param_list if not p.dynamic]
+        for param in nondyn_parameters:
             if isinstance(param, FTParameterRange):
                 if param.pow2:
                     values = powers_of_two_in_range(param.min_value, param.max_value)
@@ -1173,21 +1223,18 @@ class FTExperiment:
                     [FTParamInstance(param.name, v) for v in param.values]
                 )
 
-        minimize_params = [p for p in param_list if isinstance(p, FTParameterMinimize)]
-        if len(minimize_params) > 1:
+        dyn_params = [p for p in param_list if p.dynamic]
+        if len(dyn_params) > 1:
             logger.error(
-                "Only one parameter can be minimized at a time. "
-                "Multiple minimizing parameters are not supported yet."
+                "Only one dynamic parameter is allowed. "
+                "Multiple dynamic parameters are not supported yet."
             )
             sys.exit(1)
-        if len(minimize_params) == 1:
-            param_product_list.append(
-                [
-                    FTParamInstance(
-                        minimize_params[0].name, minimize_params[0].init_value
-                    )
-                ]
-            )
+        if len(dyn_params) == 1:
+            # value for dynamic parameter will be set later
+            # just add a placeholder
+            # this is why they are called dynamic
+            param_product_list.append([FTParamInstance(dyn_params[0].name, -1)])
 
         return itertools.product(*param_product_list)
 
@@ -1221,36 +1268,67 @@ class FTExperiment:
     def _finetune_minimize(
         self, options: FTOptions, init_param_instance: tuple[FTParamInstance, ...]
     ) -> None:
-        if not isinstance(options.parameters[-1], FTParameterMinimize):
+        param = next(
+            p for p in options.parameters if p.name == init_param_instance[-1].name
+        )
+        if not isinstance(param, FTParameterMinimize):
             logger.error(
                 "Minimize parameter must be the last parameter in the list. Got %s",
                 init_param_instance[-1],
             )
             return
 
-        init_value: int = int(options.parameters[-1].init_value)
+        init_value = param.init_value
 
-        value: int = init_value
-        step: int = value // 2
+        if init_value == 1:
+            nworking_runs = 0
+            while True:
+                param_instance = init_param_instance[:-1] + (
+                    FTParamInstance(options.parameters[-1].name, init_value),
+                )
+
+                ftrun = self._ftrun_from_options(options, param_instance)
+                ftrun.exec(
+                    env=options.env,
+                    timeout=options.timeout if options.timeout > 0 else None,
+                )
+                ftrun.cleanup()
+
+                # keep track of the best runs
+                if not ftrun.has_error() and ftrun.kernel_execution_time is not None:
+                    self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
+
+                if ftrun.kernel_execution_time is not None:
+                    nworking_runs += 1
+
+                # Log the result
+                ftrun.log_result(logger)
+
+                if nworking_runs >= 2:
+                    break
+
+                init_value *= 10
+
+        value = init_value
+        step = value // 2
 
         while step > options.minimize_min_step:
             param_instance = init_param_instance[:-1] + (
                 FTParamInstance(options.parameters[-1].name, value),
             )
 
-            print(f"{param_instance}")
-
             ftrun = self._ftrun_from_options(options, param_instance)
-            ftrun.exec(env=options.env)
+            ftrun.exec(
+                env=options.env,
+                timeout=options.timeout if options.timeout > 0 else None,
+            )
             ftrun.cleanup()
-
-            score_str = ""
 
             # keep track of the best runs
             if not ftrun.has_error() and ftrun.kernel_execution_time is not None:
                 self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
 
-            if ftrun.has_error():
+            if ftrun.kernel_execution_time is None:
                 value = value + step
             else:
                 value = value - step
@@ -1264,20 +1342,136 @@ class FTExperiment:
                 step = (step + 50) // 100 * 100
 
             # Log the result
-            if ftrun.has_error():
-                # If the run has an error, we log it as N/A
-                score_str += "N/A"
-                if ftrun.exit_code is not None:
-                    # If there is an exit code, we log it
-                    score_str += f" (exit code: {ftrun.exit_code})"
-            else:  # valid run with execution time
-                # add execution time to log
-                score_str += f"{ftrun.kernel_execution_time:.6f}"
+            ftrun.log_result(logger)
 
-            logger.info(
-                "\t%s%s",
-                " ".join(f"{str(p.value)[:15]:<15}" for p in ftrun.params),
-                score_str,
+    def _finetune_dyntpz_vol(
+        self, options: FTOptions, init_param_instance: tuple[FTParamInstance, ...]
+    ) -> None:
+        param = next(
+            p for p in options.parameters if p.name == init_param_instance[-1].name
+        )
+        if not isinstance(param, FTParameterDynVol):
+            logger.error(
+                "Could not find tpz dyn param. Got %s",
+                init_param_instance[-1],
+            )
+            return
+
+        value = param.init_value
+        max_run = param.max_value
+
+        runs_without_error: list[tuple[int, float]] = []
+
+        # first we want to find an volume where the program terminates correctly
+        while len(runs_without_error) < 4:
+            param_instance = init_param_instance[:-1] + (
+                FTParamInstance(options.parameters[-1].name, value),
+            )
+
+            ftrun = self._ftrun_from_options(options, param_instance)
+            ftrun.exec(
+                env=options.env,
+                timeout=options.timeout if options.timeout > 0 else None,
+            )
+            ftrun.cleanup()
+
+            # keep track of the best runs
+            if not ftrun.has_error() and ftrun.kernel_execution_time is not None:
+                self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
+
+            if ftrun.kernel_execution_time is not None:
+                runs_without_error.append((value, ftrun.kernel_execution_time))
+
+            value *= 10
+
+            # Log the result
+            ftrun.log_result(logger)
+
+        if len(runs_without_error) < 2:
+            logger.error(
+                "Could not find two values for parameter '%s' that run without error. "
+                "Got %d.",
+                options.parameters[-1].name,
+                len(runs_without_error),
+            )
+            return
+
+        # sort the runs by the parameter value
+        runs_without_error.sort(key=lambda x: x[0])
+
+        # find the value with min execution time
+        min_idx = min(
+            range(len(runs_without_error)), key=lambda i: runs_without_error[i][1]
+        )
+
+        if min_idx == 0:
+            min_run = runs_without_error[0]
+            max_run = runs_without_error[1]
+        elif min_idx == len(runs_without_error) - 1:
+            min_run = runs_without_error[-2]
+            max_run = runs_without_error[-3]
+        else:
+            min_run = runs_without_error[min_idx - 1]
+            max_run = runs_without_error[min_idx + 1]
+
+        last_run = max_run
+        step = (max_run[0] - min_run[0]) // 2
+        value = last_run[0] - step
+        error_count = 0
+        while step > options.minimize_min_step:
+            # round value to the nearest hundred
+            if value >= 100:
+                value = (value + 50) // 100 * 100
+
+            param_instance = init_param_instance[:-1] + (
+                FTParamInstance(options.parameters[-1].name, value),
+            )
+
+            ftrun = self._ftrun_from_options(options, param_instance)
+            ftrun.exec(env=options.env, timeout=options.timeout)
+            ftrun.cleanup()
+
+            # keep track of the best runs
+            if not ftrun.has_error() and ftrun.kernel_execution_time is not None:
+                self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
+
+            if ftrun.kernel_execution_time is not None:
+                step = step // 2
+                if ftrun.kernel_execution_time < last_run[1]:
+                    last_run = (value, ftrun.kernel_execution_time)
+                    value = value - step
+                else:
+                    last_run = (value, ftrun.kernel_execution_time)
+                    value = value + step
+                error_count = 0
+            else:
+                error_count += 1
+
+            # Log the result
+            ftrun.log_result(logger)
+
+            if error_count >= 5:
+                break
+
+    def _finetune_dynamic_param(
+        self, options: FTOptions, init_param_instance: tuple[FTParamInstance, ...]
+    ) -> None:
+        dynamic_params = [p for p in options.parameters if p.dynamic]
+        if len(dynamic_params) != 1:
+            logger.error(
+                "Only one dynamic parameter is supported for dynamic finetuning. Got %d",
+                len(dynamic_params),
+            )
+            return
+
+        if isinstance(dynamic_params[0], FTParameterMinimize):
+            self._finetune_minimize(options, init_param_instance)
+        elif isinstance(dynamic_params[0], FTParameterDynVol):
+            self._finetune_dyntpz_vol(options, init_param_instance)
+        else:
+            logger.error(
+                "Dynamic parameter type '%s' is not supported yet.",
+                type(dynamic_params[0]),
             )
 
     def _finetune(self, options: FTOptions) -> None:
@@ -1288,16 +1482,10 @@ class FTExperiment:
 
         param_instance_tuple_list = self._gen_param_instances(options.parameters)
 
-        has_minimize = any(
-            isinstance(param, FTParameterMinimize) for param in options.parameters
-        )
+        has_dyn_param = any(param.dynamic for param in options.parameters)
 
-        param_name_list = [
-            p for p in options.parameters if not isinstance(p, FTParameterMinimize)
-        ]
-        param_name_list.extend(
-            [p for p in options.parameters if isinstance(p, FTParameterMinimize)]
-        )
+        param_name_list = [p for p in options.parameters if not p.dynamic]
+        param_name_list.extend([p for p in options.parameters if p.dynamic])
 
         logger.info(
             "\t%s%s",
@@ -1309,8 +1497,8 @@ class FTExperiment:
                 logger.warning("Experiment interrupted. Exiting...")
                 return
 
-            if has_minimize:
-                self._finetune_minimize(options, param_instance_tuple)
+            if has_dyn_param:
+                self._finetune_dynamic_param(options, param_instance_tuple)
                 continue
 
             ftrun = self._ftrun_from_options(options, param_instance_tuple)
@@ -1320,30 +1508,12 @@ class FTExperiment:
             )
             ftrun.cleanup()
 
-            score_str = ""
-
             # keep track of the best runs
             if not ftrun.has_error() and ftrun.kernel_execution_time is not None:
                 self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
 
             # Log the result
-            if ftrun.has_error():
-                # If the run has an error, we log it as N/A
-                score_str += "N/A"
-                if ftrun.error_message:
-                    score_str += f" ({ftrun.error_message})"
-                elif ftrun.exit_code is not None:
-                    # If there is an exit code, we log it
-                    score_str += f" (exit code: {ftrun.exit_code})"
-            else:  # valid run with execution time
-                # add execution time to log
-                score_str += f"{ftrun.kernel_execution_time:.6f}"
-
-            logger.info(
-                "\t%s%s",
-                " ".join(f"{str(p.value)[:15]:<15}" for p in ftrun.params),
-                score_str,
-            )
+            ftrun.log_result(logger)
 
     def _measure_perf(self, options: FTOptions) -> None:
         """Re-run the best runs multiple times to get a better average performance."""
