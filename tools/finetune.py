@@ -843,6 +843,7 @@ class FTRunBuilderStepCompile(FTRunBuilderTransform):
 
         output = sources[-1].parent / (sources[-1].stem + ".bin")
         cmd = self._build_compile_cmd(sources, output)
+        logger.info("%s", " ".join(cmd))
         result = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -1108,7 +1109,9 @@ class FTRunBuilder:
         set_parameters_macro: bool = True,
     ) -> "FTRunBuilder":
         """Indicate that the binary should be compiled from the given sources"""
-        _extra_flags = extra_flags if extra_flags else []
+        _extra_flags: list[str] = []
+        if extra_flags:
+            _extra_flags.extend(extra_flags)
         if set_parameters_macro:
             # Add a macro to the extra flags to set the parameters
             _extra_flags.extend(
