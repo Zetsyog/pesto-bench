@@ -11,6 +11,7 @@ import shutil
 import hashlib
 import os
 import statistics
+import math
 
 from pathlib import Path
 from collections.abc import Iterator
@@ -715,6 +716,9 @@ class FTRun:
         """Execute the run
         An FTRun is a single run of the benchmark with a given set of parameters
         """
+        if timeout == 0:
+            timeout = None
+
         self.exit_code = None
         self.kernel_execution_time = None
 
@@ -843,7 +847,6 @@ class FTRunBuilderStepCompile(FTRunBuilderTransform):
 
         output = sources[-1].parent / (sources[-1].stem + ".bin")
         cmd = self._build_compile_cmd(sources, output)
-        logger.info("%s", " ".join(cmd))
         result = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -1361,12 +1364,13 @@ class FTExperiment:
             return
 
         value = param.init_value
-        max_run = param.max_value
+        max_run_nb = 20
 
-        runs_without_error: list[tuple[int, float]] = []
+        run_history: list[tuple[int, float]] = []
+        valid_runs = 0
 
         # first we want to find an volume where the program terminates correctly
-        while len(runs_without_error) < 4:
+        while valid_runs < 4:
             param_instance = init_param_instance[:-1] + (
                 FTParamInstance(options.parameters[-1].name, value),
             )
@@ -1383,77 +1387,125 @@ class FTExperiment:
                 self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
 
             if ftrun.kernel_execution_time is not None:
-                runs_without_error.append((value, ftrun.kernel_execution_time))
+                run_history.append((value, ftrun.kernel_execution_time))
+                valid_runs += 1
+            else:
+                run_history.append((value, float("inf")))
 
             value *= 10
 
             # Log the result
             ftrun.log_result(logger)
 
-        if len(runs_without_error) < 2:
+        assert len(run_history) > 2
+
+        # sort the runs by the parameter value
+        run_history.sort(key=lambda x: x[0])
+
+        # find the value with min execution time
+        min_idx = min(range(len(run_history)), key=lambda i: run_history[i][1])
+
+        # we want to have a left and right value around the minimum
+        if len(run_history) < 2:
             logger.error(
                 "Could not find two values for parameter '%s' that run without error. "
                 "Got %d.",
                 options.parameters[-1].name,
-                len(runs_without_error),
+                len(run_history),
             )
             return
 
-        # sort the runs by the parameter value
-        runs_without_error.sort(key=lambda x: x[0])
+        left = run_history[min_idx - 1] if min_idx > 0 else None
+        right = run_history[min_idx + 1] if min_idx < len(run_history) - 1 else None
 
-        # find the value with min execution time
-        min_idx = min(
-            range(len(runs_without_error)), key=lambda i: runs_without_error[i][1]
-        )
+        if left is None:
+            left = run_history[min_idx]
+        if right is None:
+            right = run_history[min_idx]
 
-        if min_idx == 0:
-            min_run = runs_without_error[0]
-            max_run = runs_without_error[1]
-        elif min_idx == len(runs_without_error) - 1:
-            min_run = runs_without_error[-2]
-            max_run = runs_without_error[-3]
-        else:
-            min_run = runs_without_error[min_idx - 1]
-            max_run = runs_without_error[min_idx + 1]
+        assert left is not None
+        assert right is not None
 
-        last_run = max_run
-        step = (max_run[0] - min_run[0]) // 2
-        value = last_run[0] - step
+        step = (right[0] - left[0]) // 2
+
+        # print(step)
+
         error_count = 0
-        while step > options.minimize_min_step:
-            # round value to the nearest hundred
-            if value >= 100:
-                value = (value + 50) // 100 * 100
 
-            param_instance = init_param_instance[:-1] + (
-                FTParamInstance(options.parameters[-1].name, value),
+        phi = (math.sqrt(5) - 1) / 2  # Golden ratio conjugate
+
+        last_lval = 0
+        last_rval = 0
+        run_nb = 0
+        while step > options.minimize_min_step:
+            l_val = math.log(left[0]) + phi * (math.log(right[0]) - math.log(left[0]))
+            l_val = int(math.exp(l_val))
+            r_val = math.log(right[0]) - phi * (math.log(right[0]) - math.log(left[0]))
+            r_val = int(math.exp(r_val))
+
+            if l_val > r_val:
+                l_val, r_val = r_val, l_val
+
+            # round to the nearest 10
+            if l_val >= 10:
+                l_val = (l_val + 5) // 10 * 10
+            if r_val >= 10:
+                r_val = (r_val + 5) // 10 * 10
+
+            # some sanity checks to avoid infinite loops
+            if l_val == last_lval and r_val == last_rval:
+                break
+            last_lval = l_val
+            last_rval = r_val
+
+            l_instance = init_param_instance[:-1] + (
+                FTParamInstance(options.parameters[-1].name, l_val),
             )
 
-            ftrun = self._ftrun_from_options(options, param_instance)
-            ftrun.exec(env=options.env, timeout=options.timeout)
-            ftrun.cleanup()
+            r_instance = init_param_instance[:-1] + (
+                FTParamInstance(options.parameters[-1].name, r_val),
+            )
 
-            # keep track of the best runs
-            if not ftrun.has_error() and ftrun.kernel_execution_time is not None:
-                self.best_runs.insert((ftrun.kernel_execution_time, ftrun.params))
+            l_ftrun = self._ftrun_from_options(options, l_instance)
+            l_ftrun.exec(env=options.env, timeout=options.timeout)
+            l_ftrun.cleanup()
 
-            if ftrun.kernel_execution_time is not None:
-                step = step // 2
-                if ftrun.kernel_execution_time < last_run[1]:
-                    last_run = (value, ftrun.kernel_execution_time)
-                    value = value - step
-                else:
-                    last_run = (value, ftrun.kernel_execution_time)
-                    value = value + step
-                error_count = 0
-            else:
-                error_count += 1
+            r_ftrun = self._ftrun_from_options(options, r_instance)
+            r_ftrun.exec(env=options.env, timeout=options.timeout)
+            r_ftrun.cleanup()
 
+            if l_ftrun.kernel_execution_time is not None:
+                if not l_ftrun.has_error():
+                    self.best_runs.insert(
+                        (l_ftrun.kernel_execution_time, l_ftrun.params)
+                    )
+                run_history.append((l_val, l_ftrun.kernel_execution_time))
+
+            if r_ftrun.kernel_execution_time is not None:
+                if not r_ftrun.has_error():
+                    self.best_runs.insert(
+                        (r_ftrun.kernel_execution_time, r_ftrun.params)
+                    )
+                run_history.append((r_val, r_ftrun.kernel_execution_time))
+
+            if l_ftrun.has_error():
+                left = (l_val, float("inf"))
+            if l_ftrun.kernel_execution_time is not None:
+                if l_ftrun.kernel_execution_time < left[1]:
+                    left = (l_val, l_ftrun.kernel_execution_time)
+
+            if r_ftrun.kernel_execution_time is not None:
+                if r_ftrun.kernel_execution_time < right[1]:
+                    right = (r_val, r_ftrun.kernel_execution_time)
+
+            step = r_val - l_val
             # Log the result
-            ftrun.log_result(logger)
+            l_ftrun.log_result(logger)
+            r_ftrun.log_result(logger)
 
-            if error_count >= 5:
+            # prevent infinite loop
+            run_nb += 1
+            if run_nb >= max_run_nb:
                 break
 
     def _finetune_dynamic_param(
