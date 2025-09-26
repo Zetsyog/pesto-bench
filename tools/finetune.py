@@ -1491,11 +1491,11 @@ class FTExperiment:
             if l_ftrun.has_error():
                 left = (l_val, float("inf"))
             if l_ftrun.kernel_execution_time is not None:
-                if l_ftrun.kernel_execution_time < left[1]:
+                if l_ftrun.kernel_execution_time <= left[1]:
                     left = (l_val, l_ftrun.kernel_execution_time)
 
             if r_ftrun.kernel_execution_time is not None:
-                if r_ftrun.kernel_execution_time < right[1]:
+                if r_ftrun.kernel_execution_time <= right[1]:
                     right = (r_val, r_ftrun.kernel_execution_time)
 
             step = r_val - l_val
