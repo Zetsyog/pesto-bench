@@ -155,6 +155,8 @@ class FTOptions:
         self.force_omp_schedule: Optional[str] = None
         self.minimize_min_step: int = 500
         self.timeout: int = 0
+        self.perf_nrun: int = 5
+        self.perf_nmedianrun: int = 3
 
     def _init_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
@@ -322,6 +324,22 @@ class FTOptions:
             metavar="SECONDS",
             dest="timeout",
             help="Timeout in seconds for each run. 0 means no timeout. ",
+        )
+        parser.add_argument(
+            "--perf-nrun",
+            default=5,
+            type=int,
+            metavar="N",
+            dest="perf_nrun",
+            help="Number of runs for performance measurement. ",
+        )
+        parser.add_argument(
+            "--perf-nmedianrun",
+            default=3,
+            type=int,
+            metavar="N",
+            dest="perf_nmedianrun",
+            help="Number of median runs for performance measurement. ",
         )
 
         return parser
@@ -614,6 +632,8 @@ class FTOptions:
             self.env["OMP_SCHEDULE"] = str(self.force_omp_schedule)
 
         self.timeout = ns.timeout
+        self.perf_nrun = ns.perf_nrun
+        self.perf_nmedianrun = ns.perf_nmedianrun
 
     def dump(self, level: int = logging.INFO) -> None:
         """Dump the parsed options to the logger."""
@@ -1191,8 +1211,6 @@ class FTExperiment:
             tuple[float, tuple[FTParamInstance, ...]]
         ] = FixedSizeSortedList(max_size=20)
 
-        self._run_number: int = 5
-        self._median_runs: int = 3
         self.trimmed_mean_results: list[tuple[float, tuple[FTParamInstance, ...]]] = []
 
     def _gen_param_instances(
@@ -1417,6 +1435,7 @@ class FTExperiment:
 
         left = run_history[min_idx - 1] if min_idx > 0 else None
         right = run_history[min_idx + 1] if min_idx < len(run_history) - 1 else None
+        middle = run_history[min_idx]
 
         if left is None:
             left = run_history[min_idx]
@@ -1430,12 +1449,8 @@ class FTExperiment:
 
         # print(step)
 
-        error_count = 0
-
         phi = (math.sqrt(5) - 1) / 2  # Golden ratio conjugate
 
-        last_lval = 0
-        last_rval = 0
         run_nb = 0
         while step > options.minimize_min_step:
             l_val = math.log(left[0]) + phi * (math.log(right[0]) - math.log(left[0]))
@@ -1451,12 +1466,6 @@ class FTExperiment:
                 l_val = (l_val + 5) // 10 * 10
             if r_val >= 10:
                 r_val = (r_val + 5) // 10 * 10
-
-            # some sanity checks to avoid infinite loops
-            if l_val == last_lval and r_val == last_rval:
-                break
-            last_lval = l_val
-            last_rval = r_val
 
             l_instance = init_param_instance[:-1] + (
                 FTParamInstance(options.parameters[-1].name, l_val),
@@ -1490,12 +1499,25 @@ class FTExperiment:
 
             if l_ftrun.has_error():
                 left = (l_val, float("inf"))
+
+            # update middle
             if l_ftrun.kernel_execution_time is not None:
-                if l_ftrun.kernel_execution_time <= left[1]:
+                if l_ftrun.kernel_execution_time < middle[1]:
+                    middle = (l_val, l_ftrun.kernel_execution_time)
+            if r_ftrun.kernel_execution_time is not None:
+                if r_ftrun.kernel_execution_time < middle[1]:
+                    middle = (r_val, r_ftrun.kernel_execution_time)
+
+            if l_ftrun.kernel_execution_time is not None:
+                if l_ftrun.kernel_execution_time > middle[1]:
+                    left = (l_val, l_ftrun.kernel_execution_time)
+                if l_ftrun.kernel_execution_time >= left[1]:
                     left = (l_val, l_ftrun.kernel_execution_time)
 
             if r_ftrun.kernel_execution_time is not None:
-                if r_ftrun.kernel_execution_time <= right[1]:
+                if r_ftrun.kernel_execution_time > middle[1]:
+                    right = (r_val, r_ftrun.kernel_execution_time)
+                if r_ftrun.kernel_execution_time >= right[1]:
                     right = (r_val, r_ftrun.kernel_execution_time)
 
             step = r_val - l_val
@@ -1592,7 +1614,7 @@ class FTExperiment:
             ftrun = self._ftrun_from_options(options, param_instances)
 
             # run the best runs multiple times to get a better average
-            for _ in range(self._run_number):
+            for _ in range(options.perf_nrun):
                 ftrun.exec(env=options.env)
 
                 if ftrun.exit_code != 0:
@@ -1607,10 +1629,10 @@ class FTExperiment:
 
             ftrun.cleanup()
 
-            if len(score_list) < self._run_number:
+            if len(score_list) < options.perf_nrun:
                 logger.error(
                     "Not enough runs completed. Expected %d, got %d.",
-                    self._run_number,
+                    options.perf_nrun,
                     len(score_list),
                 )
                 logger.error("An error may have occurred during the runs. Skipping.")
@@ -1625,8 +1647,8 @@ class FTExperiment:
 
             median_scores = score_list[
                 len(score_list) // 2
-                - self._median_runs // 2 : len(score_list) // 2
-                + self._median_runs // 2
+                - options.perf_nmedianrun // 2 : len(score_list) // 2
+                + options.perf_nmedianrun // 2
             ]
             mean_score = sum(score[0] for score in median_scores) / len(median_scores)
             self.trimmed_mean_results.append((mean_score, param_instances))
