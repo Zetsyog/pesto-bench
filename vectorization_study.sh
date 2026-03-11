@@ -88,7 +88,21 @@ for bench in "${ALL_BENCHMARKS[@]}"; do
 			continue
 		fi
 
-		cmd="$CC $CFLAGS -fopt-info-vec-all=$report -I${POLYBENCH_DIR}/utilities $src ${POLYBENCH_DIR}/utilities/polybench.c -o $bin"
+		cmd="$CC $CFLAGS -fopt-info-vec-all=$report_dir/all.$version.txt -I${POLYBENCH_DIR}/utilities $src ${POLYBENCH_DIR}/utilities/polybench.c -o $bin"
+		echo "Compiling with command: $cmd"
+		if ! $cmd; then
+			echo "Compilation failed for $src. Skipping."
+			continue
+		fi
+
+		cmd="$CC $CFLAGS -fopt-info-vec-missed=$report_dir/missed.$version.txt -I${POLYBENCH_DIR}/utilities $src ${POLYBENCH_DIR}/utilities/polybench.c -o $bin"
+		echo "Compiling with command: $cmd"
+		if ! $cmd; then
+			echo "Compilation failed for $src. Skipping."
+			continue
+		fi
+
+		cmd="$CC $CFLAGS -fopt-info-vec-optimized=$report_dir/optimized.$version.txt -I${POLYBENCH_DIR}/utilities $src ${POLYBENCH_DIR}/utilities/polybench.c -o $bin"
 		echo "Compiling with command: $cmd"
 		if ! $cmd; then
 			echo "Compilation failed for $src. Skipping."
