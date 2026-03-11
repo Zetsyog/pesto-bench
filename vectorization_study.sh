@@ -88,7 +88,7 @@ for bench in "${ALL_BENCHMARKS[@]}"; do
 			continue
 		fi
 
-		cmd="$CC $CFLAGS -fopt-info-vec-all=$report -I${POLYBENCH_DIR}/utilities -o $bin $src"
+		cmd="$CC $CFLAGS -fopt-info-vec-all=$report -I${POLYBENCH_DIR}/utilities $src ${POLYBENCH_DIR}/utilities/polybench.c -o $bin"
 		echo "Compiling with command: $cmd"
 		if ! $cmd; then
 			echo "Compilation failed for $src. Skipping."
