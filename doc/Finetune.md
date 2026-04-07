@@ -41,6 +41,7 @@ Examples:
 - **--compiler-extra-flags FLAG...**: Extra flags passed to the compiler on top of the default cflags.
 - **-I, --include-dir PATH...**: Additional include directories for the compiler.
 - **--output-dump-baseline PATH...**: Source(s) used to generate baseline outputs for result comparison.
+- **--output-dump-flags [FLAGS]**: Extra flags to pass when compiling for output dumping (both baseline and variant). Default is `-DPOLYBENCH_DUMP_ARRAYS`.
 - **--compiler-bin BIN**: Path to compiler binary (e.g. `/usr/bin/gcc`). If omitted the script attempts to use `gcc` from PATH.
 - **--env ENV_FILE**: Path to a file with environment variable definitions to load before runs.
 - **--save-incorrect-sources [DIR]**: If specified, sources that produce incorrect outputs will be saved to DIR.
