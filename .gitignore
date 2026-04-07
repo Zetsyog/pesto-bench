@@ -8,3 +8,20 @@ pb_data/
 flake.lock
 sample/
 export/
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+compile_commands.json
+
+*.o
+*.log
+*.tmp
+.cache/

@@ -1,0 +1,6 @@
+baseline
+pluto
+pesto
+*.pluto.*
+*.pesto.*
+*.cloog

@@ -12,6 +12,7 @@ import hashlib
 import os
 import statistics
 import math
+import re
 
 from pathlib import Path
 from collections.abc import Iterator
@@ -142,14 +143,11 @@ class FTOptions:
         self.pluto_custom_vec_pragma: Optional[str] = None
         self.parameters: list[FTParameter] = []
         self.compiler_binary: Path = Path(shutil.which("gcc") or "gcc")
-        self.compiler_cflags: list[str] = [
-            "-march=native",
-            "-O3",
-            "-fopenmp",
-        ]
+        self.compiler_cflags: list[str] = []
         self.compiler_extra_flags: list[str] = []
         self.top_n_runs: int = 20
         self.output_dump_baseline_sources: list[Path] = []
+        self.output_dump_extra_flags: list[str] = []
         self.env: dict[str, str] = {}
         self.save_incorrect_sources: Optional[Path] = None
         self.force_omp_schedule: Optional[str] = None
@@ -157,6 +155,7 @@ class FTOptions:
         self.timeout: int = 0
         self.perf_nrun: int = 5
         self.perf_nmedianrun: int = 3
+        self.additional_includes: list[str] = []
 
     def _init_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
@@ -240,6 +239,18 @@ class FTOptions:
         )
 
         parser.add_argument(
+            "--compiler-cflags",
+            action="extend",
+            nargs="+",
+            default=["-march=native", "-O3", "-fopenmp"],
+            type=str,
+            metavar="FLAG",
+            dest="compiler_cflags",
+            help="Extra flags to pass to the compiler when compiling the source file. "
+            "Can be specified multiple times.",
+        )
+
+        parser.add_argument(
             "--compiler-extra-flags",
             action="extend",
             nargs="+",
@@ -273,6 +284,17 @@ class FTOptions:
             dest="output_dump_baseline",
             help="Path to the the source(s) file(s) that will be used as "
             "a baseline for output comparison. ",
+        )
+
+        parser.add_argument(
+            "--output-dump-flags",
+            action="extend",
+            nargs="+",
+            default=["-DPOLYBENCH_DUMP_ARRAYS"],
+            type=str,
+            dest="output_dump_flags",
+            metavar="FLAG",
+            help="Extra flags to pass to the compiler when compiling the source file for output dumping. ",
         )
 
         parser.add_argument(
@@ -340,6 +362,18 @@ class FTOptions:
             metavar="N",
             dest="perf_nmedianrun",
             help="Number of median runs for performance measurement. ",
+        )
+
+        parser.add_argument(
+            "--insert-include",
+            action="extend",
+            nargs="+",
+            default=[],
+            type=str,
+            metavar="INCLUDE_FILE",
+            dest="insert_include",
+            help="Name of header files that will be inserted into the source code before compilation. "
+            "Can be specified multiple times.",
         )
 
         return parser
@@ -480,6 +514,9 @@ class FTOptions:
                     sys.exit(1)
                 self.compiler_extra_flags.extend(["-I", f"{include_dir.absolute()}"])
 
+        for flag in ns.compiler_cflags:
+            self.compiler_cflags.extend(flag.split())
+
         if ns.compiler_extra_flags:
             for flag in ns.compiler_extra_flags:
                 self.compiler_extra_flags.extend(flag.split())
@@ -493,6 +530,9 @@ class FTOptions:
                     src,
                 )
                 sys.exit(1)
+        
+        for flag in ns.output_dump_flags:
+            self.output_dump_extra_flags.extend(flag.split())
 
         if ns.compiler_binary:
             compiler_path = shutil.which(str(ns.compiler_binary))
@@ -634,6 +674,11 @@ class FTOptions:
         self.timeout = ns.timeout
         self.perf_nrun = ns.perf_nrun
         self.perf_nmedianrun = ns.perf_nmedianrun
+
+        # include directives
+        if ns.insert_include:
+            # ns.insert_include contains Path objects (from argparse type=Path); convert to strings
+            self.additional_includes = [str(p) for p in ns.insert_include]
 
     def dump(self, level: int = logging.INFO) -> None:
         """Dump the parsed options to the logger."""
@@ -1073,6 +1118,58 @@ class FTRunBuilderStepOmpSchedule(FTRunBuilderTransform):
         return output_bundle
 
 
+class FTRunBuilderInsertIncludes(FTRunBuilderTransform):
+    """Step for inserting include directives into the sources in the FTRunBuilder."""
+
+    def __init__(self, includes: list[str]):
+        super().__init__()
+        self._includes = includes
+
+        self._regex = re.compile(
+            r"^\s*\#include\s+[\"<]([^\">]+)[\">]", flags=re.MULTILINE | re.UNICODE
+        )
+
+    def apply(
+        self, input_bundle: FTTransformSourceBundle
+    ) -> FTTransformSourceBundle | None:
+        """Apply include directives to the sources."""
+        output_bundle = FTTransformSourceBundle([], [], [])
+
+        for src in input_bundle.sources:
+            if not src.is_file():
+                output_bundle.sources.append(src)
+                continue
+
+            # Insert include directives at the beginning of the source file
+            output_file = src.with_suffix(".included.c")
+
+            # prevent include duplicates
+            existing_includes: set[str] = set()
+
+            # regex to extract include name
+
+            with open(src, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("#include"):
+                        match = self._regex.match(line)
+                        if match:
+                            existing_includes.add(match.group(0))
+
+            with open(src, "r", encoding="utf-8") as fin, open(
+                output_file, "w", encoding="utf-8"
+            ) as fout:
+                for include in self._includes:
+                    if include not in existing_includes:
+                        fout.write(f"#include <{include}>\n")
+                fout.write(fin.read())
+
+            output_bundle.generated_files.append(output_file)
+            output_bundle.sources.append(output_file)
+            output_bundle.cleanup_files.append(output_file)
+
+        return output_bundle
+
+
 class FTRunBuilder:
     """Builder for FTRun instances.
     This is used to build FTRun instances with a fluent interface.
@@ -1278,6 +1375,11 @@ class FTExperiment:
         if options.force_omp_schedule:
             builder.add_transform(
                 FTRunBuilderStepOmpSchedule(options.force_omp_schedule)
+            )
+
+        if len(options.additional_includes) > 0:
+            builder.add_transform(
+                FTRunBuilderInsertIncludes(options.additional_includes)
             )
 
         builder.compile(
@@ -1682,7 +1784,7 @@ class FTExperiment:
             .compile(
                 options.compiler_binary,
                 cflags=options.compiler_cflags,
-                extra_flags=options.compiler_extra_flags + ["-DPOLYBENCH_DUMP_ARRAYS"],
+                extra_flags=options.compiler_extra_flags + options.output_dump_extra_flags,
             )
             .build()
         )
@@ -1738,7 +1840,7 @@ class FTExperiment:
             builder = builder.compile(
                 compiler_bin=options.compiler_binary,
                 cflags=options.compiler_cflags,
-                extra_flags=options.compiler_extra_flags + ["-DPOLYBENCH_DUMP_ARRAYS"],
+                extra_flags=options.compiler_extra_flags + options.output_dump_extra_flags,
             )
             ftrun = builder.build()
 
