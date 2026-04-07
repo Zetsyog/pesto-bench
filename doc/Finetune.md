@@ -37,6 +37,7 @@ Examples:
 - **--pluto-flags FLAG...**: Extra flags to pass to Pluto. Can be repeated.
 - **--pluto-custom-vec-pragma PRAGMA**: Custom vectorization pragma to inject when using Pluto.
 - **--param NAME EXPR**: Declare an experiment parameter to sweep or finetune. See "Parameter expression syntax" below for the supported formats. Can be specified multiple times to supply multiple parameters.
+- **--compiler-cflags FLAG...**: Flags passed to the compiler as cflags (e.g. optimization flags). Can be repeated.
 - **--compiler-extra-flags FLAG...**: Extra flags passed to the compiler on top of the default cflags.
 - **-I, --include-dir PATH...**: Additional include directories for the compiler.
 - **--output-dump-baseline PATH...**: Source(s) used to generate baseline outputs for result comparison.
