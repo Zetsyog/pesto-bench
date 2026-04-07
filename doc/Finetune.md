@@ -1,10 +1,10 @@
-**Finetune**
+# Finetune
 
 - **File**: [tools/finetune.py](tools/finetune.py)
 
 This document explains how to use the `finetune.py` helper script to search and tune compilation / tiling parameters for Polybench-style benchmarks. It contains a usage section with examples, a complete list of supported CLI options, the parameter expression syntax, and an advanced section describing the implementation and internal components.
 
-**Usage**
+## Usage
 
 - **Synopsis**: `python tools/finetune.py [OPTIONS] PATH...`
 - **Purpose**: compile and run one benchmark consisting of one or several source files while sweeping or finetuning parameters (tile sizes, volumes, etc.) to find best-performing configurations.
@@ -27,8 +27,7 @@ Examples:
 
   `python tools/finetune.py --param V "dyn[min,1024]" bench.c`
 
-
-**Options**
+## Options
 
 - **sources**: One or more source paths to compile/run. Positional arguments.
 - **--log-file PATH**: Save the script log output to PATH.
@@ -51,8 +50,7 @@ Examples:
 - **--perf-nmedianrun N**: Number of median runs used when computing trimmed means (default 3).
 - **--insert-include FILE...**: Insert header include directives into the source before compilation.
 
-
-**Parameter expression syntax**
+### Parameter expression syntax
 
 The `--param NAME EXPR` option supports three expression forms. Examples show how to declare parameters to the finetune engine.
 
@@ -72,16 +70,14 @@ The `--param NAME EXPR` option supports three expression forms. Examples show ho
 
 Only one dynamic parameter is allowed per experiment. Non-dynamic parameters are enumerated first; the dynamic parameter (if any) is tuned via a targeted search.
 
-
-**Behavior and measurement**
+## Behavior and measurement
 
 - The script compiles sources into an executable for each parameter configuration (unless a transformation step produces a precompiled binary).
 - Performance measurement: the script runs each configuration and records a kernel execution time. For top candidates it re-runs multiple times to compute a trimmed mean and standard deviation (`--perf-nrun`, `--perf-nmedianrun`).
 - Safety/correctness: if `--output-dump-baseline` is provided the script will compile and run the baseline executable with `-DPOLYBENCH_DUMP_ARRAYS` and compare outputs (hash-based) to ensure transformed binaries produce correct results. Incorrect outputs can be saved with `--save-incorrect-sources`.
 - OpenMP: the script may set `OMP_SCHEDULE` when `--force-omp-schedule` is specified; otherwise it inherits environment values. Use `--env FILE` to load a file of environment variables before runs.
 
-
-**Advanced: implementation details**
+## Advanced: implementation details
 
 This section is intended for maintainers and contributors who want to understand or extend the finetune engine. See the source for exact implementation: [tools/finetune.py](tools/finetune.py).
 
@@ -123,8 +119,7 @@ This section is intended for maintainers and contributors who want to understand
   - Add transformations by implementing `FTRunBuilderTransform.apply()` and adding instances to the `FTRunBuilder` chain.
   - Measurement strategies can be adjusted by tuning `FTOptions.perf_nrun` and `perf_nmedianrun`.
 
-
-**Where to look in the code**
+### Where to look in the code
 
 - Primary implementation: [tools/finetune.py](tools/finetune.py)
   - CLI and parsing: `FTOptions` (method `_init_parser` and `parse`).
