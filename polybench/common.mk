@@ -2,6 +2,7 @@ CC?=gcc
 CFLAGS?=-march=native -O3 -fopenmp
 LDFLAGS=-I${ROOT_DIR}/polybench/utilities  -lm
 POLYBENCH_SRC=${ROOT_DIR}/polybench/utilities/polybench.c
+EXTRA_FLAGS?=-DPOLYBENCH_TIME -DLARGE_DATASET
 
 POLYCC?=polycc
 PLUTO_FLAGS?=--tile --parallel --nounroll --prevector
@@ -27,11 +28,10 @@ pesto: ${SRC}.pesto.c
 pluto: ${SRC}.pluto.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
-check-pluto: 
-	make -s baseline pluto -B EXTRA_FLAGS="-DBENCHMARK_DUMP" >/dev/null 2>&1
-	./baseline 2>baseline.log
+check-pluto: original pluto
+	./original 2>original.log
 	./pluto 2>pluto.log
-	sha256sum baseline.log pluto.log
+	sha256sum original.log pluto.log
 
 clean:
 	rm -f ${SRC}.pluto.c ${SRC}.pesto.c baseline pesto pluto

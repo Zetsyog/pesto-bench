@@ -69,9 +69,9 @@ static void print_array(int m, int n, DATA_TYPE POLYBENCH_2D(C, M, N, m, n)) {
 static void kernel_symm(int m, int n, DATA_TYPE alpha, DATA_TYPE beta,
 						DATA_TYPE POLYBENCH_2D(C, M, N, m, n),
 						DATA_TYPE POLYBENCH_2D(A, M, M, m, m),
-						DATA_TYPE POLYBENCH_2D(B, M, N, m, n),
-						DATA_TYPE POLYBENCH_2D(temp2, M, N, m, n)) {
+						DATA_TYPE POLYBENCH_2D(B, M, N, m, n)) {
 	int i, j, k;
+	DATA_TYPE temp2;
 
 // BLAS PARAMS
 // SIDE = 'L'
@@ -85,13 +85,13 @@ static void kernel_symm(int m, int n, DATA_TYPE alpha, DATA_TYPE beta,
 #pragma scop
 	for (i = 0; i < _PB_M; i++) {
 		for (j = 0; j < _PB_N; j++) {
-			temp2[i][j] = 0;
+			temp2 = 0;
 			for (k = 0; k < i; k++) {
 				C[k][j] += alpha * B[i][j] * A[i][k];
-				temp2[i][j] += B[k][j] * A[i][k];
+				temp2 += B[k][j] * A[i][k];
 			}
-			C[i][j] = beta * C[i][j] + alpha * B[i][j] * A[i][i] +
-					  alpha * temp2[i][j];
+			C[i][j] =
+				beta * C[i][j] + alpha * B[i][j] * A[i][i] + alpha * temp2;
 		}
 	}
 #pragma endscop
@@ -108,7 +108,6 @@ int main(int argc, char **argv) {
 	POLYBENCH_2D_ARRAY_DECL(C, DATA_TYPE, M, N, m, n);
 	POLYBENCH_2D_ARRAY_DECL(A, DATA_TYPE, M, M, m, m);
 	POLYBENCH_2D_ARRAY_DECL(B, DATA_TYPE, M, N, m, n);
-	POLYBENCH_2D_ARRAY_DECL(temp2, DATA_TYPE, M, N, m, n);
 
 	/* Initialize array(s). */
 	init_array(m, n, &alpha, &beta, POLYBENCH_ARRAY(C), POLYBENCH_ARRAY(A),
@@ -119,7 +118,7 @@ int main(int argc, char **argv) {
 
 	/* Run kernel. */
 	kernel_symm(m, n, alpha, beta, POLYBENCH_ARRAY(C), POLYBENCH_ARRAY(A),
-				POLYBENCH_ARRAY(B), POLYBENCH_ARRAY(temp2));
+				POLYBENCH_ARRAY(B));
 
 	/* Stop and print timer. */
 	polybench_stop_instruments;
@@ -133,7 +132,6 @@ int main(int argc, char **argv) {
 	POLYBENCH_FREE_ARRAY(C);
 	POLYBENCH_FREE_ARRAY(A);
 	POLYBENCH_FREE_ARRAY(B);
-	POLYBENCH_FREE_ARRAY(temp2);
 
 	return 0;
 }
