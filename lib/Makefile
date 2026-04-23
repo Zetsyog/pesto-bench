@@ -1,5 +1,5 @@
 CC?=gcc
-CFLAGS?=-O2 -Wall -Wextra -std=c23
+CFLAGS?=-O2 -Wall -Wextra
 LDFLAGS?=-static  -I../include
 AR?=ar
 
