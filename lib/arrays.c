@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <benchmark/arrays.h>
+#include <benchmark.h>
 
 void *benchmark_alloc_data(size_t n, size_t size) {
 	void *ptr = nullptr;
