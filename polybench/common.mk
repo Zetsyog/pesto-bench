@@ -8,7 +8,9 @@ POLYCC?=polycc
 PLUTO_FLAGS?=--tile --parallel --nounroll --prevector
 
 PESTO?=pesto
-PESTO_ATILING_CONFIG?=
+PESTO_TPZ_CONFIG?=$(ROOT_DIR)/pesto_config/tpz.json
+PESTO_ATILING_CONFIG?=$(ROOT_DIR)/pesto_config/atiling.json
+PESTO_HYBRID_CONFIG?=$(ROOT_DIR)/pesto_config/hybrid.json
 PESTO_FLAGS?=--indent
 
 all: baseline pluto
@@ -16,23 +18,34 @@ all: baseline pluto
 ${SRC}.pluto.c: ${SRC}.c
 	${POLYCC} ${PLUTO_FLAGS} $^ -o $@
 
-${SRC}.pesto.c: ${SRC}.c
-	${PESTO} ${PESTO_FLAGS} --config ${PESTO_CONFIG} $^ -o $@
+${SRC}.atiled.c: ${SRC}.c
+	${PESTO} ${PESTO_FLAGS} --config ${PESTO_ATILING_CONFIG} $^ -o $@
+
+${SRC}.hybrid.c: ${SRC}.c
+	${PESTO} ${PESTO_FLAGS} --config ${PESTO_HYBRID_CONFIG} $^ -o $@	
 
 baseline: ${SRC}.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
-pesto: ${SRC}.pesto.c
+atiled: ${SRC}.atiled.c
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
+
+hybrid: ${SRC}.hybrid.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
 pluto: ${SRC}.pluto.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
-check-pluto: original pluto
-	./original 2>original.log
+check-pluto: baseline pluto
+	./baseline 2>baseline.log
 	./pluto 2>pluto.log
-	sha256sum original.log pluto.log
+	sha256sum baseline.log pluto.log
+
+check-atiled: baseline atiled
+	./baseline 2>baseline.log
+	./atiled 2>atiled.log
+	sha256sum baseline.log atiled.log
 
 clean:
-	rm -f ${SRC}.pluto.c ${SRC}.pesto.c baseline pesto pluto
+	rm -f ${SRC}.pluto.c ${SRC}.atiled.c baseline atiled pluto
 	rm -f *.o *.cloog *.log
