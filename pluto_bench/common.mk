@@ -1,6 +1,6 @@
 CC?=gcc
 CFLAGS?=-march=native -O3 -fopenmp
-LDFLAGS=-I${ROOT_DIR}/include -L${ROOT_DIR}/lib -lm -lbenchmark
+LDFLAGS=-I${ROOT_DIR}/include -lm
 
 POLYCC?=polycc
 PLUTO_FLAGS?=--parallel --nounroll --prevector
@@ -16,13 +16,13 @@ ${SRC}.pesto.c: ${SRC}.c
 	${PESTO} ${PESTO_FLAGS} --config ${PESTO_CONFIG} $^ -o $@
 
 baseline: ${SRC}.c
-	${CC} ${CFLAGS}  $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
+	${CC} ${CFLAGS} ${ROOT_DIR}/lib/benchmark.c $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
 pesto: ${SRC}.pesto.c
-	${CC} ${CFLAGS} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
+	${CC} ${CFLAGS} ${ROOT_DIR}/lib/benchmark.c $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
 pluto: ${SRC}.pluto.c
-	${CC} ${CFLAGS} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
+	${CC} ${CFLAGS} ${ROOT_DIR}/lib/benchmark.c $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
 check-pluto: 
 	make -s baseline pluto -B EXTRA_FLAGS="-DBENCHMARK_DUMP" >/dev/null 2>&1

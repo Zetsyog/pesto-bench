@@ -1,9 +1,28 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 
+#include <benchmark.h>
 #include <benchmark/time.h>
 
+/**
+ * Allocations utilities
+ */
+void *benchmark_alloc_data(size_t n, size_t size) {
+	void *ptr = nullptr;
+	size_t alloc_sz = n * size;
+	int err = posix_memalign(&ptr, 4096, alloc_sz);
+	if (err != 0) {
+		fprintf(stderr, "Error allocating memory: %d\n", err);
+	}
+	return ptr;
+}
+
+/**
+ * Timer utilities
+ */
 static struct timeval start, end, result;
 
 void _benchmark_timer_start() { gettimeofday(&start, NULL); }
