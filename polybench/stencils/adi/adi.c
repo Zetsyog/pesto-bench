@@ -68,8 +68,6 @@ static void kernel_adi(int tsteps, int n, DATA_TYPE POLYBENCH_2D(u, N, N, n, n),
 	DATA_TYPE mul1, mul2;
 	DATA_TYPE a, b, c, d, e, f;
 
-#pragma scop
-
 	DX = SCALAR_VAL(1.0) / (DATA_TYPE)_PB_N;
 	DY = SCALAR_VAL(1.0) / (DATA_TYPE)_PB_N;
 	DT = SCALAR_VAL(1.0) / (DATA_TYPE)_PB_TSTEPS;
@@ -78,6 +76,7 @@ static void kernel_adi(int tsteps, int n, DATA_TYPE POLYBENCH_2D(u, N, N, n, n),
 	mul1 = B1 * DT / (DX * DX);
 	mul2 = B2 * DT / (DY * DY);
 
+#pragma scop
 	a = -mul1 / SCALAR_VAL(2.0);
 	b = SCALAR_VAL(1.0) + mul1;
 	c = a;
