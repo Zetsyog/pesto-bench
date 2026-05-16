@@ -51,34 +51,34 @@ static void print_array(int n, DATA_TYPE POLYBENCH_1D(y, N, n))
 /* Main computational kernel. The whole function will be timed,
    including the call and return. */
 static void kernel_durbin(int n, DATA_TYPE POLYBENCH_1D(r, N, n),
-						  DATA_TYPE POLYBENCH_1D(y, N, n),
-						  DATA_TYPE POLYBENCH_1D(sum, N, n)) {
+						  DATA_TYPE POLYBENCH_1D(y, N, n)) {
 	DATA_TYPE z[N];
-	DATA_TYPE alpha[N];
-	DATA_TYPE beta[N];
+	DATA_TYPE alpha;
+	DATA_TYPE beta;
+	DATA_TYPE sum;
 
 	int i, k;
 
 #pragma scop
 	y[0] = -r[0];
-	beta[0] = SCALAR_VAL(1.0);
-	alpha[0] = -r[0];
+	beta = SCALAR_VAL(1.0);
+	alpha = -r[0];
 
 	for (k = 1; k < _PB_N; k++) {
-		beta[k] = (1 - alpha[k - 1] * alpha[k - 1]) * beta[k - 1];
-		sum[k] = SCALAR_VAL(0.0);
+		beta = (1 - alpha * alpha) * beta;
+		sum = SCALAR_VAL(0.0);
 		for (i = 0; i < k; i++) {
-			sum[k] += r[k - i - 1] * y[i];
+			sum += r[k - i - 1] * y[i];
 		}
-		alpha[k] = -(r[k] + sum[k]) / beta[k];
+		alpha = -(r[k] + sum) / beta;
 
 		for (i = 0; i < k; i++) {
-			z[i] = y[i] + alpha[k] * y[k - i - 1];
+			z[i] = y[i] + alpha * y[k - i - 1];
 		}
 		for (i = 0; i < k; i++) {
 			y[i] = z[i];
 		}
-		y[k] = alpha[k];
+		y[k] = alpha;
 	}
 #pragma endscop
 }
@@ -90,7 +90,6 @@ int main(int argc, char **argv) {
 	/* Variable declaration/allocation. */
 	POLYBENCH_1D_ARRAY_DECL(r, DATA_TYPE, N, n);
 	POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE, N, n);
-	POLYBENCH_1D_ARRAY_DECL(sum, DATA_TYPE, N, n);
 
 	/* Initialize array(s). */
 	init_array(n, POLYBENCH_ARRAY(r));
@@ -99,8 +98,7 @@ int main(int argc, char **argv) {
 	polybench_start_instruments;
 
 	/* Run kernel. */
-	kernel_durbin(n, POLYBENCH_ARRAY(r), POLYBENCH_ARRAY(y),
-				  POLYBENCH_ARRAY(sum));
+	kernel_durbin(n, POLYBENCH_ARRAY(r), POLYBENCH_ARRAY(y));
 
 	/* Stop and print timer. */
 	polybench_stop_instruments;
@@ -113,7 +111,6 @@ int main(int argc, char **argv) {
 	/* Be clean. */
 	POLYBENCH_FREE_ARRAY(r);
 	POLYBENCH_FREE_ARRAY(y);
-	POLYBENCH_FREE_ARRAY(sum);
 
 	return 0;
 }

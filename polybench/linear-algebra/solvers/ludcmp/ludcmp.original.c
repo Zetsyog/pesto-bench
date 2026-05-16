@@ -92,42 +92,43 @@ static void print_array(int n, DATA_TYPE POLYBENCH_1D(x, N, n))
 static void kernel_ludcmp(int n, DATA_TYPE POLYBENCH_2D(A, N, N, n, n),
 						  DATA_TYPE POLYBENCH_1D(b, N, n),
 						  DATA_TYPE POLYBENCH_1D(x, N, n),
-						  DATA_TYPE POLYBENCH_1D(y, N, n),
-						  DATA_TYPE POLYBENCH_2D(w, N, N, n, n)) {
+						  DATA_TYPE POLYBENCH_1D(y, N, n)) {
 	int i, j, k;
+
+	DATA_TYPE w;
 
 #pragma scop
 	for (i = 0; i < _PB_N; i++) {
 		for (j = 0; j < i; j++) {
-			w[i][j] = A[i][j];
+			w = A[i][j];
 			for (k = 0; k < j; k++) {
-				w[i][j] -= A[i][k] * A[k][j];
+				w -= A[i][k] * A[k][j];
 			}
-			A[i][j] = w[i][j] / A[j][j];
+			A[i][j] = w / A[j][j];
 		}
 		for (j = i; j < _PB_N; j++) {
-			w[i][j] = A[i][j];
+			w = A[i][j];
 			for (k = 0; k < i; k++) {
-				w[i][j] -= A[i][k] * A[k][j];
+				w -= A[i][k] * A[k][j];
 			}
-			A[i][j] = w[i][j];
+			A[i][j] = w;
 		}
 	}
 
 	for (i = 0; i < _PB_N; i++) {
-		w[i][0] = b[i];
+		w = b[i];
 		for (j = 0; j < i; j++) {
-			w[i][0] -= A[i][j] * y[j];
+			w -= A[i][j] * y[j];
 		}
-		y[i] = w[i][0];
+		y[i] = w;
 	}
 
 	for (i = _PB_N - 1; i >= 0; i--) {
-		w[i][0] = y[i];
+		w = y[i];
 		for (j = i + 1; j < _PB_N; j++) {
-			w[i][0] -= A[i][j] * x[j];
+			w -= A[i][j] * x[j];
 		}
-		x[i] = w[i][0] / A[i][i];
+		x[i] = w / A[i][i];
 	}
 #pragma endscop
 }
@@ -141,7 +142,6 @@ int main(int argc, char **argv) {
 	POLYBENCH_1D_ARRAY_DECL(b, DATA_TYPE, N, n);
 	POLYBENCH_1D_ARRAY_DECL(x, DATA_TYPE, N, n);
 	POLYBENCH_1D_ARRAY_DECL(y, DATA_TYPE, N, n);
-	POLYBENCH_2D_ARRAY_DECL(w, DATA_TYPE, N, N, n, n);
 
 	/* Initialize array(s). */
 	init_array(n, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(b), POLYBENCH_ARRAY(x),
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
 
 	/* Run kernel. */
 	kernel_ludcmp(n, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(b), POLYBENCH_ARRAY(x),
-				  POLYBENCH_ARRAY(y), POLYBENCH_ARRAY(w));
+				  POLYBENCH_ARRAY(y));
 
 	/* Stop and print timer. */
 	polybench_stop_instruments;
@@ -167,6 +167,6 @@ int main(int argc, char **argv) {
 	POLYBENCH_FREE_ARRAY(b);
 	POLYBENCH_FREE_ARRAY(x);
 	POLYBENCH_FREE_ARRAY(y);
-	POLYBENCH_FREE_ARRAY(w);
+
 	return 0;
 }
