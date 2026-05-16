@@ -1,3 +1,3 @@
-SRC=doigten
+SRC=doitgen
 
 include ../../../common.mk
