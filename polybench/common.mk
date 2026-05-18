@@ -47,5 +47,9 @@ check-atiled: baseline atiled
 	sha256sum baseline.log atiled.log
 
 clean:
-	rm -f ${SRC}.pluto.c ${SRC}.atiled.c baseline atiled pluto
+	rm -f baseline
+	rm -f pluto ${SRC}.pluto.c
+	rm -f atiled ${SRC}.atiled.c
+	rm -f hybrid ${SRC}.hybrid.c
+	rm -f *.trahrhe.*
 	rm -f *.o *.cloog *.log
