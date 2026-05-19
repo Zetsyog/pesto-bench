@@ -24,6 +24,9 @@ ${SRC}.atiled.c: ${SRC}.c
 ${SRC}.hybrid.c: ${SRC}.c
 	${PESTO} ${PESTO_FLAGS} --config ${PESTO_HYBRID_CONFIG} $^ -o $@	
 
+${SRC}.tpz.c: ${SRC}.c
+	${PESTO} ${PESTO_FLAGS} --config ${PESTO_TPZ_CONFIG} $^ -o $@
+
 baseline: ${SRC}.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
@@ -34,6 +37,9 @@ hybrid: ${SRC}.hybrid.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
 pluto: ${SRC}.pluto.c
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
+
+tpz: ${SRC}.tpz.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
 check-pluto: baseline pluto
@@ -51,5 +57,6 @@ clean:
 	rm -f pluto ${SRC}.pluto.c
 	rm -f atiled ${SRC}.atiled.c
 	rm -f hybrid ${SRC}.hybrid.c
+	rm -f tpz ${SRC}.tpz.c
 	rm -f *.trahrhe.*
 	rm -f *.o *.cloog *.log
