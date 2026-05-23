@@ -26,8 +26,7 @@
 
 #include <benchmark.h>
 
-void init_array(param_t tsteps, param_t n,
-				data_t BENCHMARK_3D(A, 2, N, N, 2, n, n)) {
+void init_array(param_t tsteps, param_t n, data_t BENCHMARK_3D(A, 2, N, N, 2, n, n)) {
 	iter_t i, j;
 
 	srand(BENCHMARK_RSEED);
@@ -39,8 +38,7 @@ void init_array(param_t tsteps, param_t n,
 	}
 }
 
-void dump_array(param_t tsteps, param_t n,
-				data_t BENCHMARK_3D(A, 2, N, N, 2, n, n)) {
+void dump_array(param_t tsteps, param_t n, data_t BENCHMARK_3D(A, 2, N, N, 2, n, n)) {
 	iter_t i, j;
 
 	BENCHMARK_DUMP_START();
@@ -63,8 +61,7 @@ void dump_array(param_t tsteps, param_t n,
 
 	for (i = 0; i < N; i++) {
 		for (j = 0; j < N; j++) {
-			sum_err_sqr +=
-				(A[T % 2][i][j] - (sum / N)) * (A[T % 2][i][j] - (sum / N));
+			sum_err_sqr += (A[T % 2][i][j] - (sum / N)) * (A[T % 2][i][j] - (sum / N));
 		}
 	}
 	for (i = 0; i < N; i++) {
@@ -73,16 +70,14 @@ void dump_array(param_t tsteps, param_t n,
 		}
 	}
 	fprintf(BENCHMARK_DUMP_FILE, "sum: %e\n", sum);
-	fprintf(BENCHMARK_DUMP_FILE, "rms(A) = " DATA_PRINTF_MODIFIER "\n",
-			SQRT_FUN(sum_err_sqr));
+	fprintf(BENCHMARK_DUMP_FILE, "rms(A) = " DATA_PRINTF_MODIFIER "\n", SQRT_FUN(sum_err_sqr));
 	fprintf(BENCHMARK_DUMP_FILE, "sum(rep(A)) = %d\n", chtotal);
 #endif
 #ifdef BENCHMARK_DUMP_ARRAYS
 	BENCHMARK_DUMP_BEGIN("A");
 	for (i = 0; i < N; i++) {
 		for (j = 0; j < N; j++) {
-			fprintf(BENCHMARK_DUMP_FILE, " " DATA_PRINTF_MODIFIER,
-					A[T % 2][i][j]);
+			fprintf(BENCHMARK_DUMP_FILE, " " DATA_PRINTF_MODIFIER, A[T % 2][i][j]);
 		}
 		fprintf(BENCHMARK_DUMP_FILE, "\n");
 	}
@@ -90,20 +85,16 @@ void dump_array(param_t tsteps, param_t n,
 	BENCHMARK_DUMP_END("A");
 }
 
-void kernel_heat_2d(param_t tsteps, param_t n,
-					data_t BENCHMARK_3D(A, 2, N, N, 2, n, n)) {
+void kernel_heat_2d(param_t tsteps, param_t n, data_t BENCHMARK_3D(A, 2, N, N, 2, n, n)) {
 	iter_t t, i, j;
 
 #pragma scop
 	for (int t = 0; t < T; t++) {
 		for (int i = 1; i < N - 1; i++) {
 			for (int j = 1; j < N - 1; j++) {
-				A[(t + 1) % 2][i][j] =
-					0.125 * (A[t % 2][i + 1][j] - 2.0 * A[t % 2][i][j] +
-							 A[t % 2][i - 1][j]) +
-					0.125 * (A[t % 2][i][j + 1] - 2.0 * A[t % 2][i][j] +
-							 A[t % 2][i][j - 1]) +
-					A[t % 2][i][j];
+				A[(t + 1) % 2][i][j] = 0.125 * (A[t % 2][i + 1][j] - 2.0 * A[t % 2][i][j] + A[t % 2][i - 1][j]) +
+									   0.125 * (A[t % 2][i][j + 1] - 2.0 * A[t % 2][i][j] + A[t % 2][i][j - 1]) +
+									   A[t % 2][i][j];
 			}
 		}
 	}
@@ -120,16 +111,17 @@ int main(int argc, char *argv[]) {
 	init_array(t, n, A);
 
 	/* start timer */
-	benchmark_measure_start();
+	bmeasure_t timer;
+	benchmark_measure_start(&timer);
 
 	/* kernel execution */
 	kernel_heat_2d(t, n, A);
 
 	/* stop timer */
-	benchmark_measure_stop();
+	benchmark_measure_stop(&timer);
 
 	/* compute and print statistics */
-	benchmark_measure_print();
+	benchmark_measure_print(&timer);
 
 #ifdef BENCHMARK_DUMP
 	dump_array(t, n, A);

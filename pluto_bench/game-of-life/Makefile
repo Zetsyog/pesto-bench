@@ -1,4 +1,4 @@
-SRC=life
+SRC=game-of-life
 
 include ../common.mk
 

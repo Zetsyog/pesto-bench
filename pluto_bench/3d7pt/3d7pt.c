@@ -4,7 +4,6 @@
  *
  * Irshad Pananilath: irshad@csa.iisc.ernet.in
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -22,8 +21,7 @@
 
 #include <benchmark.h>
 
-void init_array(param_t n, data_t *alpha, data_t *beta,
-				data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
+void init_array(param_t n, data_t *alpha, data_t *beta, data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
 	int i, j, k;
 
 	*alpha = 0.0876;
@@ -39,8 +37,7 @@ void init_array(param_t n, data_t *alpha, data_t *beta,
 	}
 }
 
-void dump_array(param_t tsteps, param_t n, data_t alpha, data_t beta,
-				data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
+void dump_array(param_t tsteps, param_t n, data_t alpha, data_t beta, data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
 	BENCHMARK_DUMP_START();
 #ifdef BENCHMARK_DUMP_CHKSUM
 	BENCHMARK_DUMP_BEGIN("parameters");
@@ -68,8 +65,7 @@ void dump_array(param_t tsteps, param_t n, data_t alpha, data_t beta,
 	for (iter_t i = 0; i < N; i++) {
 		for (iter_t j = 0; j < N; j++) {
 			for (iter_t k = 0; k < N; k++) {
-				fprintf(BENCHMARK_DUMP_FILE, " " DATA_PRINTF_MODIFIER,
-						A[T % 2][i][j][k]);
+				fprintf(BENCHMARK_DUMP_FILE, " " DATA_PRINTF_MODIFIER, A[T % 2][i][j][k]);
 			}
 			fprintf(BENCHMARK_DUMP_FILE, "\n");
 		}
@@ -80,8 +76,7 @@ void dump_array(param_t tsteps, param_t n, data_t alpha, data_t beta,
 	BENCHMARK_DUMP_STOP();
 }
 
-void kernel_3d7pt(param_t tstep, param_t n, data_t alpha, data_t beta,
-				  data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
+void kernel_3d7pt(param_t tstep, param_t n, data_t alpha, data_t beta, data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
 	iter_t t, i, j, k;
 #pragma scop
 	for (t = 0; t < T - 1; t++) {
@@ -90,9 +85,8 @@ void kernel_3d7pt(param_t tstep, param_t n, data_t alpha, data_t beta,
 				for (k = 1; k < N - 1; k++) {
 					A[(t + 1) % 2][i][j][k] =
 						alpha * (A[t % 2][i][j][k]) +
-						beta * (A[t % 2][i - 1][j][k] + A[t % 2][i][j - 1][k] +
-								A[t % 2][i][j][k - 1] + A[t % 2][i + 1][j][k] +
-								A[t % 2][i][j + 1][k] + A[t % 2][i][j][k + 1]);
+						beta * (A[t % 2][i - 1][j][k] + A[t % 2][i][j - 1][k] + A[t % 2][i][j][k - 1] +
+								A[t % 2][i + 1][j][k] + A[t % 2][i][j + 1][k] + A[t % 2][i][j][k + 1]);
 				}
 			}
 		}
@@ -114,16 +108,17 @@ int main(int argc, char *argv[]) {
 	init_array(n, &alpha, &beta, A);
 
 	/* start timer */
-	benchmark_measure_start();
+	bmeasure_t timer;
+	benchmark_measure_start(&timer);
 
 	/* serial execution - Addition: 6 && Multiplication: 2 */
 	kernel_3d7pt(T, n, alpha, beta, A);
 
 	/* stop timer */
-	benchmark_measure_stop();
+	benchmark_measure_stop(&timer);
 
 	/* print time */
-	benchmark_measure_print();
+	benchmark_measure_print(&timer);
 
 #ifdef BENCHMARK_DUMP
 	dump_array(T, N, alpha, beta, A);

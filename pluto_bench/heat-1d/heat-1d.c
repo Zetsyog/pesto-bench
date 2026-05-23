@@ -14,7 +14,7 @@
  * T is the number of timesteps
  */
 #ifndef N
-#define N 1600000L
+#define N 160000L
 #endif
 #ifndef T
 #define T 1000L
@@ -25,8 +25,7 @@
 
 #include <benchmark.h>
 
-void init_arrays(param_t tsteps, param_t n,
-				 data_t BENCHMARK_2D(A, 2, N, 2, n)) {
+void init_arrays(param_t tsteps, param_t n, data_t BENCHMARK_2D(A, 2, N, 2, n)) {
 	iter_t i;
 
 	srand(BENCHMARK_RSEED);
@@ -36,8 +35,7 @@ void init_arrays(param_t tsteps, param_t n,
 	}
 }
 
-void dump_arrays(param_t tsteps, param_t n,
-				 data_t BENCHMARK_2D(A, 2, N, 2, n)) {
+void dump_arrays(param_t tsteps, param_t n, data_t BENCHMARK_2D(A, 2, N, 2, n)) {
 	iter_t i;
 
 	BENCHMARK_DUMP_START();
@@ -60,8 +58,7 @@ void dump_arrays(param_t tsteps, param_t n,
 	for (i = 0; i < N; i++) {
 		sum_err_sqr += (A[T % 2][i] - (sum / N)) * (A[T % 2][i] - (sum / N));
 	}
-	fprintf(BENCHMARK_DUMP_FILE, "rms(A) = " DATA_PRINTF_MODIFIER "\n",
-			SQRT_FUN(sum_err_sqr));
+	fprintf(BENCHMARK_DUMP_FILE, "rms(A) = " DATA_PRINTF_MODIFIER "\n", SQRT_FUN(sum_err_sqr));
 	for (i = 0; i < N; i++) {
 		chtotal += ((char *)A[T % 2])[i];
 	}
@@ -80,14 +77,12 @@ void dump_arrays(param_t tsteps, param_t n,
 	BENCHMARK_DUMP_STOP();
 }
 
-void kernel_heat_1d(param_t tsteps, param_t n,
-					data_t BENCHMARK_2D(A, 2, N, 2, n)) {
+void kernel_heat_1d(param_t tsteps, param_t n, data_t BENCHMARK_2D(A, 2, N, 2, n)) {
 	iter_t t, i;
 #pragma scop
 	for (t = 0; t < T; t++) {
 		for (i = 1; i < N - 1; i++) {
-			A[(t + 1) % 2][i] =
-				0.250 * (A[t % 2][i + 1] - 2.0 * A[t % 2][i] + A[t % 2][i - 1]);
+			A[(t + 1) % 2][i] = 0.250 * (A[t % 2][i + 1] - 2.0 * A[t % 2][i] + A[t % 2][i - 1]);
 		}
 	}
 #pragma endscop
@@ -102,16 +97,17 @@ int main(int argc, char *argv[]) {
 	init_arrays(T, N, A);
 
 	/* start timer */
-	benchmark_measure_start();
+	bmeasure_t timer;
+	benchmark_measure_start(&timer);
 
 	/* execute the main kernel */
 	kernel_heat_1d(T, N, A);
 
 	/* stop timer */
-	benchmark_measure_stop();
+	benchmark_measure_stop(&timer);
 
 	/* compute and print statistics */
-	benchmark_measure_print();
+	benchmark_measure_print(&timer);
 
 #ifdef BENCHMARK_DUMP
 	dump_arrays(T, N, A);

@@ -26,8 +26,7 @@
 
 #include <benchmark.h>
 
-void init_array(param_t tsteps, param_t n,
-				data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
+void init_array(param_t tsteps, param_t n, data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
 	iter_t i, j, k;
 
 	srand(BENCHMARK_RSEED);
@@ -41,8 +40,7 @@ void init_array(param_t tsteps, param_t n,
 	}
 }
 
-void dump_array(param_t tsteps, param_t n,
-				data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
+void dump_array(param_t tsteps, param_t n, data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
 	iter_t i, j, k;
 
 	BENCHMARK_DUMP_START();
@@ -69,8 +67,7 @@ void dump_array(param_t tsteps, param_t n,
 	for (i = 0; i < N; i++) {
 		for (j = 0; j < N; j++) {
 			for (k = 0; k < N; k++) {
-				sum_err_sqr += (A[T % 2][i][j][k] - (sum / N)) *
-							   (A[T % 2][i][j][k] - (sum / N));
+				sum_err_sqr += (A[T % 2][i][j][k] - (sum / N)) * (A[T % 2][i][j][k] - (sum / N));
 			}
 		}
 	}
@@ -100,24 +97,18 @@ void dump_array(param_t tsteps, param_t n,
 	BENCHMARK_DUMP_STOP();
 }
 
-void kernel_heat_3d(param_t tsteps, param_t n,
-					data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
+void kernel_heat_3d(param_t tsteps, param_t n, data_t BENCHMARK_4D(A, 2, N, N, N, 2, n, n, n)) {
 	iter_t t, i, j, k;
 #pragma scop
 	for (t = 0; t < T; t++) {
 		for (i = 1; i < N - 1; i++) {
 			for (j = 1; j < N - 1; j++) {
 				for (k = 1; k < N - 1; k++) {
-					A[(t + 1) % 2][i][j][k] = 0.125 * (A[t % 2][i + 1][j][k] -
-													   2.0 * A[t % 2][i][j][k] +
-													   A[t % 2][i - 1][j][k]) +
-											  0.125 * (A[t % 2][i][j + 1][k] -
-													   2.0 * A[t % 2][i][j][k] +
-													   A[t % 2][i][j - 1][k]) +
-											  0.125 * (A[t % 2][i][j][k - 1] -
-													   2.0 * A[t % 2][i][j][k] +
-													   A[t % 2][i][j][k + 1]) +
-											  A[t % 2][i][j][k];
+					A[(t + 1) % 2][i][j][k] =
+						0.125 * (A[t % 2][i + 1][j][k] - 2.0 * A[t % 2][i][j][k] + A[t % 2][i - 1][j][k]) +
+						0.125 * (A[t % 2][i][j + 1][k] - 2.0 * A[t % 2][i][j][k] + A[t % 2][i][j - 1][k]) +
+						0.125 * (A[t % 2][i][j][k - 1] - 2.0 * A[t % 2][i][j][k] + A[t % 2][i][j][k + 1]) +
+						A[t % 2][i][j][k];
 				}
 			}
 		}
@@ -135,16 +126,17 @@ int main(int argc, char *argv[]) {
 	init_array(t, n, A);
 
 	/* start timer */
-	benchmark_measure_start();
+	bmeasure_t timer;
+	benchmark_measure_start(&timer);
 
 	/* kernel execution */
 	kernel_heat_3d(t, n, A);
 
 	/* stop timer */
-	benchmark_measure_stop();
+	benchmark_measure_stop(&timer);
 
 	/* compute and print statistics */
-	benchmark_measure_print();
+	benchmark_measure_print(&timer);
 
 #ifdef BENCHMARK_DUMP
 	dump_array(t, n, A);

@@ -17,3 +17,4 @@ clean:
 	@for bench in $(BENCHMARKS); do \
 		$(MAKE) -C $$bench clean; \
 	done
+	rm -f *.cloog

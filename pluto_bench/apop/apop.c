@@ -45,21 +45,17 @@ void print_usage(char *prog) {
 	printf("\t-E value : exercise price ( default: %0.2lf )\n", DEFAULT_E);
 	printf("\t-r value : interest rate ( default: %0.2lf )\n", DEFAULT_r * 100);
 	printf("\t-V value : volatility ( default: %0.2lf )\n", DEFAULT_V * 100);
-	printf("\t-T value : time to mature in years ( default: %0.2lf )\n\n",
-		   DEFAULT_T);
+	printf("\t-T value : time to mature in years ( default: %0.2lf )\n\n", DEFAULT_T);
 
-	printf("\t-s value : steps in space dimension ( default: %d )\n",
-		   DEFAULT_s);
-	printf("\t-t value : steps in time dimension ( default: %d )\n\n",
-		   DEFAULT_t);
+	printf("\t-s value : steps in space dimension ( default: %d )\n", DEFAULT_s);
+	printf("\t-t value : steps in time dimension ( default: %d )\n\n", DEFAULT_t);
 
 	printf("\t-i               : Run iterative stencil\n\n");
 
 	printf("\t-h               : print this help screen\n\n");
 }
 
-void init_array(param_t nt, param_t ns, data_t *E, data_t *dS,
-				data_t BENCHMARK_2D(C, 3, DEFAULT_s, 3, ns),
+void init_array(param_t nt, param_t ns, data_t *E, data_t *dS, data_t BENCHMARK_2D(C, 3, DEFAULT_s, 3, ns),
 				data_t BENCHMARK_2D(F, 2, DEFAULT_s, 2, ns)) {
 	data_t S, r, V, T;
 	iter_t i, t, x;
@@ -98,8 +94,7 @@ void init_array(param_t nt, param_t ns, data_t *E, data_t *dS,
 	}
 }
 
-void dump_arrays(param_t nt, param_t ns, data_t E, data_t dS,
-				 data_t BENCHMARK_2D(C, 3, DEFAULT_s, 3, ns),
+void dump_arrays(param_t nt, param_t ns, data_t E, data_t dS, data_t BENCHMARK_2D(C, 3, DEFAULT_s, 3, ns),
 				 data_t BENCHMARK_2D(F, 2, DEFAULT_s, 2, ns)) {
 	BENCHMARK_DUMP_START();
 #ifdef BENCHMARK_DUMP_CHKSUM
@@ -136,17 +131,14 @@ void dump_arrays(param_t nt, param_t ns, data_t E, data_t dS,
 	BENCHMARK_DUMP_STOP();
 }
 
-void kernel_apop(param_t nt, param_t ns, data_t E, data_t dS,
-				 data_t BENCHMARK_2D(C, 3, DEFAULT_s, 3, ns),
+void kernel_apop(param_t nt, param_t ns, data_t E, data_t dS, data_t BENCHMARK_2D(C, 3, DEFAULT_s, 3, ns),
 				 data_t BENCHMARK_2D(F, 2, DEFAULT_s, 2, ns)) {
 	iter_t t, i;
 #pragma scop
 	for (t = 0; t < nt; ++t) {
 		for (i = 1; i < ns; ++i) {
 			F[(t + 1) % 2][i] =
-				max(C[0][i] * F[t % 2][i - 1] + C[1][i] * F[t % 2][i] +
-						C[2][i] * F[t % 2][i + 1],
-					E - i * dS);
+				max(C[0][i] * F[t % 2][i - 1] + C[1][i] * F[t % 2][i] + C[2][i] * F[t % 2][i + 1], E - i * dS);
 		}
 	}
 #pragma endscop
@@ -181,16 +173,17 @@ int main(int argc, char *argv[]) {
 	init_array(nt, ns, &E, &dS, C, F);
 
 	/* start timer */
-	benchmark_measure_start();
+	bmeasure_t timer;
+	benchmark_measure_start(&timer);
 
 	/* serial execution */
 	kernel_apop(nt, ns, E, dS, C, F);
 
 	/* stop timer */
-	benchmark_measure_stop();
+	benchmark_measure_stop(&timer);
 
 	/* print time */
-	benchmark_measure_print();
+	benchmark_measure_print(&timer);
 
 #ifdef BENCHMARK_DUMP
 	dump_arrays(nt, ns, E, dS, C, F);

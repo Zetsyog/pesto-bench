@@ -77,22 +77,19 @@ int b2s23(int cell, int neighbors) {
 /*
  * Print the final array
  */
-void print_points(param_t tsteps, param_t n,
-				  data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
+void print_points(param_t tsteps, param_t n, data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
 	int a, b;
 
 	for (a = 0; a < N; a++) {
 		for (b = 0; b < N; b++) {
-			fprintf(BENCHMARK_DUMP_FILE, "%c ",
-					(life[tsteps % 2][a][b] ? '1' : '.'));
+			fprintf(BENCHMARK_DUMP_FILE, "%c ", (life[tsteps % 2][a][b] ? '1' : '.'));
 		}
 		fprintf(BENCHMARK_DUMP_FILE, "\n");
 	}
 	fprintf(BENCHMARK_DUMP_FILE, "\n");
 }
 
-void init_array(param_t tsteps, param_t n,
-				data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
+void init_array(param_t tsteps, param_t n, data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
 	iter_t t, i, j;
 	srand(BENCHMARK_RSEED); // seed with a constant value to verify results
 
@@ -177,8 +174,7 @@ void init_array(param_t tsteps, param_t n,
 #endif /* PRESET_RANDOM */
 }
 
-void dump_array(param_t tsteps, param_t n,
-				data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
+void dump_array(param_t tsteps, param_t n, data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
 	iter_t t, i, j;
 	BENCHMARK_DUMP_START();
 #ifdef BENCHMARK_DUMP_CHKSUM
@@ -196,19 +192,16 @@ void dump_array(param_t tsteps, param_t n,
 	BENCHMARK_DUMP_STOP();
 }
 
-void kernel_life(param_t tsteps, param_t n,
-				 data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
+void kernel_life(param_t tsteps, param_t n, data_t BENCHMARK_3D(life, 2, N, N, 2, n, n)) {
 	iter_t t, i, j;
 #pragma scop
 	for (t = 0; t < T; t++) {
 		for (i = 1; i < N - 1; i++) {
 			for (j = 1; j < N - 1; j++) {
 				life[(t + 1) % 2][i][j] = b2s23(
-					life[t % 2][i][j],
-					life[t % 2][i - 1][j + 1] + life[t % 2][i - 1][j] +
-						life[t % 2][i - 1][j - 1] + life[t % 2][i][j + 1] +
-						life[t % 2][i][j - 1] + life[t % 2][i + 1][j + 1] +
-						life[t % 2][i + 1][j] + life[t % 2][i + 1][j - 1]);
+					life[t % 2][i][j], life[t % 2][i - 1][j + 1] + life[t % 2][i - 1][j] + life[t % 2][i - 1][j - 1] +
+										   life[t % 2][i][j + 1] + life[t % 2][i][j - 1] + life[t % 2][i + 1][j + 1] +
+										   life[t % 2][i + 1][j] + life[t % 2][i + 1][j - 1]);
 			}
 		}
 	}
@@ -229,16 +222,17 @@ int main(int argc, char *argv[]) {
 #endif /* BENCHMARK_DUMP_ARRAYS */
 
 	/* start timer */
-	benchmark_measure_start();
+	bmeasure_t timer;
+	benchmark_measure_start(&timer);
 
 	/* execute the main kernel */
 	kernel_life(T, N, life);
 
 	/* stop timer */
-	benchmark_measure_stop();
+	benchmark_measure_stop(&timer);
 
 	/* compute and print statistics */
-	benchmark_measure_print();
+	benchmark_measure_print(&timer);
 
 #ifdef BENCHMARK_DUMP
 	dump_array(T, N, life);
