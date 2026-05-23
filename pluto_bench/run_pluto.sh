@@ -25,6 +25,10 @@ if [ -z "$CC" ]; then
     echo "CC is not set, defaulting to gcc"
     CC="gcc"
 fi
+if [ -z "$ENV_FILE" ]; then
+    echo "ENV_FILE is not set, defaulting to env/omp32.env"
+    ENV_FILE="./env/omp32.env"
+fi
 
 ENV_FILE="${ROOT_DIR}/env/omp32.env"
 
