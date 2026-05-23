@@ -30,8 +30,6 @@ if [ -z "$ENV_FILE" ]; then
     ENV_FILE="./env/omp32.env"
 fi
 
-ENV_FILE="${ROOT_DIR}/env/omp32.env"
-
 LOG_DIR="${ROOT_DIR}/results/pluto_all/$(date +%Y-%m-%d)/"
 FAILURE_DIR="${ROOT_DIR}/failure/pluto_all/$(date +%Y-%m-%d)/"
 
@@ -81,7 +79,7 @@ for benchmark in "${ALL_BENCHMARKS[@]}"; do
         )
 
         for ((i = 0; i < depth; i++)); do
-            cmd+=("--param" "T$i" "[4,8,pow2]")
+            cmd+=("--param" "T$i" "[2,512,pow2]")
         done
         echo "Running command:"
         echo "${cmd[@]}"
