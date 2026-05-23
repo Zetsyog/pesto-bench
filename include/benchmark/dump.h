@@ -24,24 +24,24 @@
 #define BENCHMARK_DUMP_FILE stderr
 #endif
 
-#define BENCHMARK_DUMP_START()                                                 \
-	do {                                                                       \
-		fprintf(BENCHMARK_DUMP_FILE, "==BEGIN DUMP==\n");                      \
+#define BENCHMARK_DUMP_START()                                                                                         \
+	do {                                                                                                               \
+		fprintf(BENCHMARK_DUMP_FILE, "==BEGIN DUMP==\n");                                                              \
 	} while (0)
 
-#define BENCHMARK_DUMP_STOP()                                                  \
-	do {                                                                       \
-		fprintf(BENCHMARK_DUMP_FILE, "== END DUMP ==\n");                      \
+#define BENCHMARK_DUMP_STOP()                                                                                          \
+	do {                                                                                                               \
+		fprintf(BENCHMARK_DUMP_FILE, "== END DUMP ==\n");                                                              \
 	} while (0)
 
-#define BENCHMARK_DUMP_BEGIN(s)                                                \
-	do {                                                                       \
-		fprintf(BENCHMARK_DUMP_FILE, "begin dump: %s\n", s);                   \
+#define BENCHMARK_DUMP_BEGIN(s)                                                                                        \
+	do {                                                                                                               \
+		fprintf(BENCHMARK_DUMP_FILE, "begin dump: %s\n", s);                                                           \
 	} while (0)
 
-#define BENCHMARK_DUMP_END(s)                                                  \
-	do {                                                                       \
-		fprintf(BENCHMARK_DUMP_FILE, "\nend   dump: %s\n", s);                 \
+#define BENCHMARK_DUMP_END(s)                                                                                          \
+	do {                                                                                                               \
+		fprintf(BENCHMARK_DUMP_FILE, "\nend   dump: %s\n", s);                                                         \
 	} while (0)
 
 #endif /* BENCHMARK_DUMP_H */

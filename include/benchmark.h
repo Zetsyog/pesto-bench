@@ -2,8 +2,7 @@
 #define BENCHMARK_H
 
 /* C2x/C23 or later? */
-#if (defined(__STDC__) && defined(__STDC_VERSION__) &&                         \
-	 (__STDC_VERSION__ >= 202300L))
+#if (defined(__STDC__) && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202300L))
 #include <stddef.h> /* nullptr_t */
 /* pre C23, pre C++11 or non-standard */
 #else
