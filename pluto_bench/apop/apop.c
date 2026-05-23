@@ -8,8 +8,12 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+#ifndef max
 #define max(x, y) ((x) > (y) ? (x) : (y))
+#endif
+#ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
+#endif
 
 /* apop_pochoir -S 100 -E 95 -r 10 -V 30 -T 1 -s 2000000 -t 10000 */
 

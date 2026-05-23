@@ -1,6 +1,8 @@
 baseline
 pluto
 pesto
+trapez
 *.pluto.*
 *.pesto.*
 *.cloog
+*.tpz.*

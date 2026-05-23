@@ -68,7 +68,7 @@ for benchmark in "${ALL_BENCHMARKS[@]}"; do
             --pluto-flags="${PLUTO_FLAGS}"
             --pluto-custom-vec-pragma="${PLUTO_VEC_PRAGMA}"
             --output-dump-baseline "${ROOT_DIR}/lib/benchmark.c" "${orig_src}"
-            --output-dump-flags="-DBENCHMARK_DUMP"
+            --output-dump-flags="-DBENCHMARK_DUMP_ARRAYS"
             --compiler-extra-flags="${EXTRA_FLAGS}"
             --env "$ENV_FILE"
             --force-omp-schedule "$schedule"
