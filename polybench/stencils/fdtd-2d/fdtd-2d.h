@@ -1,18 +1,8 @@
-/**
- * This version is stamped on May 10, 2016
- *
- * Contact:
- *   Louis-Noel Pouchet <pouchet.ohio-state.edu>
- *   Tomofumi Yuki <tomofumi.yuki.fr>
- *
- * Web address: http://polybench.sourceforge.net
- */
 #ifndef _FDTD_2D_H
 #define _FDTD_2D_H
 
 /* Default to LARGE_DATASET. */
-#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) &&                       \
-	!defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&                     \
+#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&        \
 	!defined(EXTRALARGE_DATASET)
 #define LARGE_DATASET
 #endif
@@ -49,6 +39,36 @@
 #define NY 2600
 #endif
 
+#ifdef XL2_DATASET
+#define TMAX 2000
+#define NX 4000
+#define NY 5200
+#endif
+
+#ifdef XL3_DATASET
+#define TMAX 3000
+#define NX 6000
+#define NY 7800
+#endif
+
+#ifdef XL4_DATASET
+#define TMAX 4000
+#define NX 8000
+#define NY 10400
+#endif
+
+#ifdef XL5_DATASET
+#define TMAX 5000
+#define NX 10000
+#define NY 13000
+#endif
+
+#ifdef XL6_DATASET
+#define TMAX 6000
+#define NX 12000
+#define NY 15600
+#endif
+
 #endif /* !(TMAX NX NY) */
 
 #define _PB_TMAX POLYBENCH_LOOP_BOUND(TMAX, tmax)
@@ -56,8 +76,7 @@
 #define _PB_NY POLYBENCH_LOOP_BOUND(NY, ny)
 
 /* Default data type */
-#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) &&              \
-	!defined(DATA_TYPE_IS_DOUBLE)
+#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
 #define DATA_TYPE_IS_DOUBLE
 #endif
 

@@ -12,9 +12,9 @@ if ($#ARGV != 0) {
    exit(1);
 }
 
-my $SPECFILE = 'polybench.spec';
+my $SPECFILE = 'polybench_nxl.spec';
 my $OUTDIR = $ARGV[0];
-my @DATASET_NAMES = ('MINI', 'SMALL', 'MEDIUM', 'LARGE', 'EXTRALARGE');
+my @DATASET_NAMES = ('MINI', 'SMALL', 'MEDIUM', 'LARGE', 'EXTRALARGE', 'XL2', 'XL3', 'XL4', 'XL5', 'XL6');
 
 if (!(-e $OUTDIR)) {
    mkdir $OUTDIR;

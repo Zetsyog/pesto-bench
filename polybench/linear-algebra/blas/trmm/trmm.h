@@ -1,18 +1,8 @@
-/**
- * This version is stamped on May 10, 2016
- *
- * Contact:
- *   Louis-Noel Pouchet <pouchet.ohio-state.edu>
- *   Tomofumi Yuki <tomofumi.yuki.fr>
- *
- * Web address: http://polybench.sourceforge.net
- */
 #ifndef _TRMM_H
 #define _TRMM_H
 
 /* Default to LARGE_DATASET. */
-#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) &&                       \
-	!defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&                     \
+#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&        \
 	!defined(EXTRALARGE_DATASET)
 #define LARGE_DATASET
 #endif
@@ -44,14 +34,38 @@
 #define N 2600
 #endif
 
+#ifdef XL2_DATASET
+#define M 4000
+#define N 5200
+#endif
+
+#ifdef XL3_DATASET
+#define M 6000
+#define N 7800
+#endif
+
+#ifdef XL4_DATASET
+#define M 8000
+#define N 10400
+#endif
+
+#ifdef XL5_DATASET
+#define M 10000
+#define N 13000
+#endif
+
+#ifdef XL6_DATASET
+#define M 12000
+#define N 15600
+#endif
+
 #endif /* !(M N) */
 
 #define _PB_M POLYBENCH_LOOP_BOUND(M, m)
 #define _PB_N POLYBENCH_LOOP_BOUND(N, n)
 
 /* Default data type */
-#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) &&              \
-	!defined(DATA_TYPE_IS_DOUBLE)
+#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
 #define DATA_TYPE_IS_DOUBLE
 #endif
 

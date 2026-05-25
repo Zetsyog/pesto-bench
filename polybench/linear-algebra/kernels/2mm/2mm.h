@@ -1,18 +1,8 @@
-/**
- * This version is stamped on May 10, 2016
- *
- * Contact:
- *   Louis-Noel Pouchet <pouchet.ohio-state.edu>
- *   Tomofumi Yuki <tomofumi.yuki.fr>
- *
- * Web address: http://polybench.sourceforge.net
- */
 #ifndef _2MM_H
 #define _2MM_H
 
 /* Default to LARGE_DATASET. */
-#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) &&                       \
-	!defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&                     \
+#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&        \
 	!defined(EXTRALARGE_DATASET)
 #define LARGE_DATASET
 #endif
@@ -54,6 +44,41 @@
 #define NL 2400
 #endif
 
+#ifdef XL2_DATASET
+#define NI 3200
+#define NJ 3600
+#define NK 4400
+#define NL 4800
+#endif
+
+#ifdef XL3_DATASET
+#define NI 4800
+#define NJ 5400
+#define NK 6600
+#define NL 7200
+#endif
+
+#ifdef XL4_DATASET
+#define NI 6400
+#define NJ 7200
+#define NK 8800
+#define NL 9600
+#endif
+
+#ifdef XL5_DATASET
+#define NI 8000
+#define NJ 9000
+#define NK 11000
+#define NL 12000
+#endif
+
+#ifdef XL6_DATASET
+#define NI 9600
+#define NJ 10800
+#define NK 13200
+#define NL 14400
+#endif
+
 #endif /* !(NI NJ NK NL) */
 
 #define _PB_NI POLYBENCH_LOOP_BOUND(NI, ni)
@@ -62,8 +87,7 @@
 #define _PB_NL POLYBENCH_LOOP_BOUND(NL, nl)
 
 /* Default data type */
-#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) &&              \
-	!defined(DATA_TYPE_IS_DOUBLE)
+#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
 #define DATA_TYPE_IS_DOUBLE
 #endif
 

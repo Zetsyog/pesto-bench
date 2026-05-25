@@ -1,18 +1,8 @@
-/**
- * This version is stamped on May 10, 2016
- *
- * Contact:
- *   Louis-Noel Pouchet <pouchet.ohio-state.edu>
- *   Tomofumi Yuki <tomofumi.yuki.fr>
- *
- * Web address: http://polybench.sourceforge.net
- */
 #ifndef _JACOBI_2D_H
 #define _JACOBI_2D_H
 
 /* Default to LARGE_DATASET. */
-#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) &&                       \
-	!defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&                     \
+#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&        \
 	!defined(EXTRALARGE_DATASET)
 #define LARGE_DATASET
 #endif
@@ -44,14 +34,38 @@
 #define N 2800
 #endif
 
+#ifdef XL2_DATASET
+#define TSTEPS 2000
+#define N 5600
+#endif
+
+#ifdef XL3_DATASET
+#define TSTEPS 3000
+#define N 8400
+#endif
+
+#ifdef XL4_DATASET
+#define TSTEPS 4000
+#define N 11200
+#endif
+
+#ifdef XL5_DATASET
+#define TSTEPS 5000
+#define N 14000
+#endif
+
+#ifdef XL6_DATASET
+#define TSTEPS 6000
+#define N 16800
+#endif
+
 #endif /* !(TSTEPS N) */
 
 #define _PB_TSTEPS POLYBENCH_LOOP_BOUND(TSTEPS, tsteps)
 #define _PB_N POLYBENCH_LOOP_BOUND(N, n)
 
 /* Default data type */
-#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) &&              \
-	!defined(DATA_TYPE_IS_DOUBLE)
+#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
 #define DATA_TYPE_IS_DOUBLE
 #endif
 

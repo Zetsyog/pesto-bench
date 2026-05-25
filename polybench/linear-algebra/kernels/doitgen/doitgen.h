@@ -1,18 +1,8 @@
-/**
- * This version is stamped on May 10, 2016
- *
- * Contact:
- *   Louis-Noel Pouchet <pouchet.ohio-state.edu>
- *   Tomofumi Yuki <tomofumi.yuki.fr>
- *
- * Web address: http://polybench.sourceforge.net
- */
 #ifndef _DOITGEN_H
 #define _DOITGEN_H
 
 /* Default to LARGE_DATASET. */
-#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) &&                       \
-	!defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&                     \
+#if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) &&        \
 	!defined(EXTRALARGE_DATASET)
 #define LARGE_DATASET
 #endif
@@ -49,6 +39,36 @@
 #define NP 270
 #endif
 
+#ifdef XL2_DATASET
+#define NQ 440
+#define NR 500
+#define NP 540
+#endif
+
+#ifdef XL3_DATASET
+#define NQ 660
+#define NR 750
+#define NP 810
+#endif
+
+#ifdef XL4_DATASET
+#define NQ 880
+#define NR 1000
+#define NP 1080
+#endif
+
+#ifdef XL5_DATASET
+#define NQ 1100
+#define NR 1250
+#define NP 1350
+#endif
+
+#ifdef XL6_DATASET
+#define NQ 1320
+#define NR 1500
+#define NP 1620
+#endif
+
 #endif /* !(NQ NR NP) */
 
 #define _PB_NQ POLYBENCH_LOOP_BOUND(NQ, nq)
@@ -56,8 +76,7 @@
 #define _PB_NP POLYBENCH_LOOP_BOUND(NP, np)
 
 /* Default data type */
-#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) &&              \
-	!defined(DATA_TYPE_IS_DOUBLE)
+#if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
 #define DATA_TYPE_IS_DOUBLE
 #endif
 
