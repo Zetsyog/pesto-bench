@@ -1290,7 +1290,7 @@ class FTRunBuilder:
 
         ftrun = FTRun(
             params=self._params,
-            command=str(sources[0].absolute()),
+            command=[str(sources[0].absolute())],
         )
         ftrun.cleanup_files.extend(cleanup_files)
 
