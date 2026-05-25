@@ -764,10 +764,10 @@ class FTRun:
     Else they should be moved to the FTExperiment class.
     """
 
-    def __init__(self, params: tuple[FTParamInstance, ...], command: str):
+    def __init__(self, params: tuple[FTParamInstance, ...], command: list[str]):
         self.params: tuple[FTParamInstance, ...] = params
 
-        self.command: str = command
+        self.command: list[str] = list(command)
 
         self.exit_code: Optional[int] = None
         self.kernel_execution_time: Optional[float] = None
@@ -790,7 +790,7 @@ class FTRun:
         self.kernel_execution_time = None
 
         proc = subprocess.Popen(
-            [self.command],
+            self.command,
             stdout=subprocess.PIPE,
             stderr=self.stderr_fd if self.stderr_fd else subprocess.PIPE,
             text=True,
