@@ -514,8 +514,10 @@ class FTOptions:
                     sys.exit(1)
                 self.compiler_extra_flags.extend(["-I", f"{include_dir.absolute()}"])
 
-        for flag in ns.compiler_cflags:
-            self.compiler_cflags.extend(flag.split())
+        if ns.compiler_cflags:
+            self.compiler_cflags = []
+            for flag in ns.compiler_cflags:
+                self.compiler_cflags.extend(flag.split())
 
         if ns.compiler_extra_flags:
             for flag in ns.compiler_extra_flags:
