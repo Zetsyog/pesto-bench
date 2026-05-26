@@ -143,7 +143,7 @@ class FTOptions:
         self.pluto_custom_vec_pragma: Optional[str] = None
         self.parameters: list[FTParameter] = []
         self.compiler_binary: Path = Path(shutil.which("gcc") or "gcc")
-        self.compiler_cflags: list[str] = []
+        self.compiler_cflags: list[str] = ["-march=native", "-O3", "-fopenmp"]
         self.compiler_extra_flags: list[str] = []
         self.top_n_runs: int = 20
         self.output_dump_baseline_sources: list[Path] = []
@@ -242,7 +242,7 @@ class FTOptions:
             "--compiler-cflags",
             action="extend",
             nargs="+",
-            default=["-march=native", "-O3", "-fopenmp"],
+            default=[],
             type=str,
             metavar="FLAG",
             dest="compiler_cflags",
