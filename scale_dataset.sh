@@ -4,10 +4,15 @@
 CSV_FILE="scale_dataset.fake.csv" # Path to your CSV file
 FINETUNE_CMD="./tools/finetune.py"
 
+PESTO_AUTO_DIV=1
+
 # Dataset flags as requested
 DATASET_LIST=(
-    "SMALL_DATASET"
-    "MEDIUM_DATASET"
+    "LARGE_DATASET"
+    "EXTRALARGE_DATASET"
+    "XL2_DATASET"
+    "XL4_DATASET"
+    "XL6_DATASET"
 )
 
 # Check if CSV file exists
@@ -107,6 +112,9 @@ tail -n +2 "$CSV_FILE" | while IFS=',' read -r benchmark source npar p0 p1 p2 p3
         log_file="${benchmark//\//_}_${dataset}.log"
 
         EXTRA_FLAGS="-lm -D${dataset} -DPOLYBENCH_TIME"
+        if [[ "$is_pluto" == false ]] && [[ "$PESTO_AUTO_DIV" -eq 1 ]]; then
+            EXTRA_FLAGS+=" -DDIV0=(omp_get_max_threads())"
+        fi
 
         # Construct the command
         # Example: ./finetune.sh covariance.pluto.static.c 3 16 64 16 -DMEDIUM_DATASET
@@ -138,6 +146,10 @@ tail -n +2 "$CSV_FILE" | while IFS=',' read -r benchmark source npar p0 p1 p2 p3
 
         i=0
         for param in "${tile_params[@]}"; do
+            if [[ "$is_pluto" == false ]] && [[ "$PESTO_AUTO_DIV" -eq 1 ]] && ((i == 0)); then
+                ((i++))
+                continue
+            fi
             cmd+=("--param")
             if [[ "$is_pluto" == true ]]; then
                 cmd+=("T$i")
