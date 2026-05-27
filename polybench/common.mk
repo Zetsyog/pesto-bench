@@ -42,15 +42,26 @@ pluto: ${SRC}.pluto.c
 tpz: ${SRC}.tpz.c
 	${CC} ${CFLAGS} ${POLYBENCH_SRC} $^ -o $@ ${LDFLAGS} ${EXTRA_FLAGS}
 
-check-pluto: baseline pluto
+check-pluto: ${SRC}.pluto.c ${SRC}.c
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} ${SRC}.c -o baseline ${LDFLAGS} ${EXTRA_FLAGS} -DPOLYBENCH_DUMP_ARRAYS
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} ${SRC}.pluto.c -o pluto ${LDFLAGS} ${EXTRA_FLAGS} -DPOLYBENCH_DUMP_ARRAYS
 	./baseline 2>baseline.log
 	./pluto 2>pluto.log
 	sha256sum baseline.log pluto.log
 
-check-atiled: baseline atiled
+check-atiled: $(SRC).atiled.c $(SRC).c
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} ${SRC}.c -o baseline ${LDFLAGS} ${EXTRA_FLAGS} -DPOLYBENCH_DUMP_ARRAYS
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} ${SRC}.atiled.c -o atiled ${LDFLAGS} ${EXTRA_FLAGS} -DPOLYBENCH_DUMP_ARRAYS
 	./baseline 2>baseline.log
 	./atiled 2>atiled.log
 	sha256sum baseline.log atiled.log
+
+check-hybrid: $(SRC).hybrid.c $(SRC).c
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} ${SRC}.c -o baseline ${LDFLAGS} ${EXTRA_FLAGS} -DPOLYBENCH_DUMP_ARRAYS
+	${CC} ${CFLAGS} ${POLYBENCH_SRC} ${SRC}.hybrid.c -o hybrid ${LDFLAGS} ${EXTRA_FLAGS} -DPOLYBENCH_DUMP_ARRAYS
+	./baseline 2>baseline.log
+	./hybrid 2>hybrid.log
+	sha256sum baseline.log hybrid.log
 
 clean:
 	rm -f baseline
