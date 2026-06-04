@@ -15,7 +15,7 @@
  * T is the number of generations to evolve
  */
 #ifndef N
-#define N 2000L
+#define N 16000L
 #endif /* N */
 #ifndef T
 #define T 500L

@@ -14,7 +14,7 @@
  * T is the number of timesteps
  */
 #ifndef N
-#define N 160000L
+#define N 1600000L
 #endif
 #ifndef T
 #define T 1000L
