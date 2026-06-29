@@ -1,6 +1,8 @@
 # pylint: disable=too-many-lines
 """Finetune parameters for a benchmark to find best performance."""
 
+from ast import expr
+from ast import expr
 import sys
 import argparse
 import bisect
@@ -84,6 +86,16 @@ class FTParameterList(FTParameter):
 
     def __str__(self):
         return f"{self.name}:\t{{{', '.join(str(v) for v in self.values)}}}"
+
+class FTParameterSet(FTParameter):
+    """Parameter that has a set of discrete values to search for."""
+
+    def __init__(self, name: str, values: set[int]):
+        super().__init__(name)
+        self.values = values
+
+    def __str__(self):
+        return f"{self.name}:\t{{={', '.join(str(v) for v in self.values)}=}}"
 
 
 class FTParameterMinimize(FTParameter):
@@ -417,6 +429,22 @@ class FTOptions:
                 return None
 
             return FTParameterRange(name, min_value, max_value, pow2, step)
+        if expr.startswith("{=") and expr.endswith("=}"):
+            if not (expr.count("{") == 1 and expr.count("}") == 1):
+                return None
+            list_part = expr[2:-2].strip()
+            list_parts = list_part.split(",")
+            # check if the list part contains a comma
+            if len(list_parts) < 1:
+                return None
+            # strip whitespaces and convert to int
+            try:
+                values = [int(part.strip()) for part in list_parts]
+            except ValueError as e:
+                logger.error("Invalid parameter set: %s", e)
+                return None
+            return FTParameterSet(name, values)
+        
         if expr.startswith("{") and expr.endswith("}"):
             if not (expr.count("{") == 1 and expr.count("}") == 1):
                 return None
@@ -503,9 +531,28 @@ class FTOptions:
 
             self.parameters.append(parsed_param)
 
+        # sanity check over paramters
+        # check there is at most one dynamic parameter
         if len([p for p in self.parameters if p.dynamic]) > 1:
             logger.error("Only one dynamic parameter is supported.")
             sys.exit(1)
+        
+        # if there is one parameter set, all parameters must be parameter sets
+        # and they must have the same number of values
+        param_sets = [p for p in self.parameters if isinstance(p, FTParameterSet)]
+        if len(param_sets) > 0 and len(param_sets) != len(self.parameters):
+            logger.error(
+                "If one parameter is a parameter set, all parameters must be parameter sets."
+            )
+            sys.exit(1)
+        if len(param_sets) > 0:
+            num_values = len(param_sets[0].values)
+            for p in param_sets:
+                if len(p.values) != num_values:
+                    logger.error(
+                        "All parameter sets must have the same number of values."
+                    )
+                    sys.exit(1)
 
         if ns.include_dirs:
             for include_dir in ns.include_dirs:
@@ -1328,10 +1375,27 @@ class FTExperiment:
                 if v >= min_value:
                     yield v
                 v <<= 1
+        
+   
+
 
         param_product_list: list[list[FTParamInstance]] = []
 
         nondyn_parameters = [p for p in param_list if not p.dynamic]
+
+        set_parameters = [p for p in param_list if isinstance(p, FTParameterSet)]
+        if len(set_parameters) > 0 and len(set_parameters) == len(nondyn_parameters):
+            set_param_len = len(set_parameters[0].values)
+            param_combinations = []
+            for i in range(set_param_len):
+                param_combinations.append(
+                    [
+                        FTParamInstance(p.name, p.values[i])
+                        for p in set_parameters
+                    ]
+                )
+            return param_combinations
+
         for param in nondyn_parameters:
             if isinstance(param, FTParameterRange):
                 if param.pow2:
@@ -1345,7 +1409,7 @@ class FTExperiment:
                 param_product_list.append(
                     [FTParamInstance(param.name, v) for v in param.values]
                 )
-
+   
         dyn_params = [p for p in param_list if p.dynamic]
         if len(dyn_params) > 1:
             logger.error(
@@ -1662,6 +1726,7 @@ class FTExperiment:
         """
 
         param_instance_tuple_list = self._gen_param_instances(options.parameters)
+
 
         has_dyn_param = any(param.dynamic for param in options.parameters)
 
