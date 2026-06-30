@@ -430,7 +430,7 @@ class FTOptions:
 
             return FTParameterRange(name, min_value, max_value, pow2, step)
         if expr.startswith("{=") and expr.endswith("=}"):
-            if not (expr.count("{") == 1 and expr.count("}") == 1):
+            if not (expr.count("{=") == 1 and expr.count("=}") == 1):
                 return None
             list_part = expr[2:-2].strip()
             list_parts = list_part.split(",")
