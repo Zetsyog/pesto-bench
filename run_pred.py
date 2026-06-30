@@ -252,11 +252,11 @@ def run_finetune_pluto(options: PredOptions, benchmark: str, tile_sizes: list):
         cmd += ["--param", f"T{i}", f"{{={values}=}}"]
 
     # create dir with current date and time
-    timestamp = datetime.datetime.now().strftime("%Y%m%d")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d")
     result_dir = pathlib.Path(options.results_dir).absolute() / "pred_bench" / timestamp
     result_dir.mkdir(parents=True, exist_ok=True)
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
     log_file = result_dir / f"{timestamp}_{benchmark.split('/')[-1]}_pluto.log"
 
