@@ -299,7 +299,7 @@ def run_finetune_pesto(options: PredOptions, benchmark: str, dividers: list):
             if j != 0:
                 values += ","
             values += str(divider_row[i])
-        cmd += ["--param", f"T{i}", f"{{={values}=}}"]
+        cmd += ["--param", f"DIV{i}", f"{{={values}=}}"]
 
     # create dir with current date and time
     timestamp = datetime.datetime.now().strftime("%Y%m%d")
@@ -308,7 +308,7 @@ def run_finetune_pesto(options: PredOptions, benchmark: str, dividers: list):
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-    log_file = result_dir / f"{timestamp}_{benchmark.split('/')[-1]}_pluto.log"
+    log_file = result_dir / f"{timestamp}_{benchmark.split('/')[-1]}_pesto.log"
 
     cmd += ["--log-file", str(log_file)]
 
@@ -329,13 +329,13 @@ def run_benchmark_single(options: PredOptions, benchmark: str):
 
     print(f"Running benchmark {benchmark} with dataset {options.target_dataset_size}")
 
-    # preferred_tile_sizes = compute_preferred_tile_sizes(options, benchmark)
+    preferred_tile_sizes = compute_preferred_tile_sizes(options, benchmark)
     preferred_dividers = compute_preferred_dividers(options, benchmark)
 
-    # print(f"Preferred tile sizes: {preferred_tile_sizes}")
+    print(f"Preferred tile sizes: {preferred_tile_sizes}")
     print(f"Preferred dividers: {preferred_dividers}")
 
-    # run_finetune_pluto(options, benchmark, preferred_tile_sizes)
+    run_finetune_pluto(options, benchmark, preferred_tile_sizes)
     run_finetune_pesto(options, benchmark, preferred_dividers)
 
 
