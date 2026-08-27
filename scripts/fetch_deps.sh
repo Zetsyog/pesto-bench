@@ -26,7 +26,7 @@ ROOT_DIR="$(pwd)"
 
 function fetch_pesto() {
 	if [ -d "${PESTO_DIR}" ]; then
-		if [ -f "${PESTO_BUILD_DIR}/pesto" ]; then
+		if [ -f "${PESTO_BUILD_DIR}/cli/pesto" ]; then
 			echo "Pesto already built. Skipping fetch."
 			return
 		else
