@@ -15,6 +15,7 @@ import os
 import statistics
 import math
 import re
+import shlex
 
 from pathlib import Path
 from collections.abc import Iterator
@@ -86,6 +87,7 @@ class FTParameterList(FTParameter):
 
     def __str__(self):
         return f"{self.name}:\t{{{', '.join(str(v) for v in self.values)}}}"
+
 
 class FTParameterSet(FTParameter):
     """Parameter that has a set of discrete values to search for."""
@@ -168,6 +170,7 @@ class FTOptions:
         self.perf_nrun: int = 5
         self.perf_nmedianrun: int = 3
         self.additional_includes: list[str] = []
+        self.gen_maxcut_script: Optional[Path] = None
 
     def _init_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
@@ -388,6 +391,15 @@ class FTOptions:
             "Can be specified multiple times.",
         )
 
+        parser.add_argument(
+            "--gen-maxcut",
+            nargs=1,
+            type=Path,
+            metavar="SCRIPT",
+            dest="gen_maxcut",
+            help="Call the gen_maxcut.py script to generate the required header file for each DIV0 parameter"
+        )
+
         return parser
 
     def _parse_experiment_param(self, name: str, expr: str) -> FTParameter | None:
@@ -444,7 +456,7 @@ class FTOptions:
                 logger.error("Invalid parameter set: %s", e)
                 return None
             return FTParameterSet(name, values)
-        
+
         if expr.startswith("{") and expr.endswith("}"):
             if not (expr.count("{") == 1 and expr.count("}") == 1):
                 return None
@@ -536,7 +548,7 @@ class FTOptions:
         if len([p for p in self.parameters if p.dynamic]) > 1:
             logger.error("Only one dynamic parameter is supported.")
             sys.exit(1)
-        
+
         # if there is one parameter set, all parameters must be parameter sets
         # and they must have the same number of values
         param_sets = [p for p in self.parameters if isinstance(p, FTParameterSet)]
@@ -579,7 +591,7 @@ class FTOptions:
                     src,
                 )
                 sys.exit(1)
-        
+
         for flag in ns.output_dump_flags:
             self.output_dump_extra_flags.extend(flag.split())
 
@@ -728,6 +740,16 @@ class FTOptions:
         if ns.insert_include:
             # ns.insert_include contains Path objects (from argparse type=Path); convert to strings
             self.additional_includes = [str(p) for p in ns.insert_include]
+
+        # gen maxcut script
+        if ns.gen_maxcut:
+            gen_maxcut_script = ns.gen_maxcut[0]
+            if not gen_maxcut_script.exists():
+                logger.error(
+                    "gen_maxcut script '%s' does not exist.", gen_maxcut_script
+                )
+                sys.exit(1)
+            self.gen_maxcut_script = gen_maxcut_script
 
     def dump(self, level: int = logging.INFO) -> None:
         """Dump the parsed options to the logger."""
@@ -926,7 +948,7 @@ class FTRunBuilderTransform:
         pass
 
     def apply(
-        self, input_bundle: FTTransformSourceBundle
+        self, input_bundle: FTTransformSourceBundle, params: tuple[FTParamInstance, ...]
     ) -> FTTransformSourceBundle | None:
         """Apply a transformation on the sources."""
         raise NotImplementedError("Subclasses must implement this method.")
@@ -952,7 +974,7 @@ class FTRunBuilderStepCompile(FTRunBuilderTransform):
         return cmd
 
     def apply(
-        self, input_bundle: FTTransformSourceBundle
+        self, input_bundle: FTTransformSourceBundle, params: tuple[FTParamInstance, ...]  
     ) -> FTTransformSourceBundle | None:
         """Compile the sources with the given compiler and flags."""
 
@@ -1008,7 +1030,7 @@ class FTRunBuilderStepPluto(FTRunBuilderTransform):
         self._pluto_tile_sizes: list[int] = tile_sizes if tile_sizes else []
         self._custom_vec_pragma: Optional[str] = custom_vec_pragma
 
-    def apply(self, input_bundle: FTTransformSourceBundle) -> FTTransformSourceBundle:
+    def apply(self, input_bundle: FTTransformSourceBundle, params: tuple[FTParamInstance, ...]) -> FTTransformSourceBundle:
         output_bundle = FTTransformSourceBundle([], [], [])
 
         sources = input_bundle.sources
@@ -1113,7 +1135,7 @@ class FTRunBuilderStepOmpSchedule(FTRunBuilderTransform):
         self._omp_schedule = omp_schedule
 
     def apply(
-        self, input_bundle: FTTransformSourceBundle
+        self, input_bundle: FTTransformSourceBundle, params: tuple[FTParamInstance, ...]
     ) -> FTTransformSourceBundle | None:
         """Apply OpenMP schedule to the sources."""
         output_bundle = FTTransformSourceBundle([], [], [])
@@ -1179,7 +1201,7 @@ class FTRunBuilderInsertIncludes(FTRunBuilderTransform):
         )
 
     def apply(
-        self, input_bundle: FTTransformSourceBundle
+        self, input_bundle: FTTransformSourceBundle, params: tuple[FTParamInstance, ...]
     ) -> FTTransformSourceBundle | None:
         """Apply include directives to the sources."""
         output_bundle = FTTransformSourceBundle([], [], [])
@@ -1218,6 +1240,109 @@ class FTRunBuilderInsertIncludes(FTRunBuilderTransform):
 
         return output_bundle
 
+class FTRunBuilderStepGenMaxcut(FTRunBuilderTransform):
+    """Step for applying Pluto transformations on the sources in the FTRunBuilder."""
+
+    def __init__(
+        self,
+        gen_maxcut_script: Path,
+    ):
+        super().__init__()
+        self._gen_maxcut_script = gen_maxcut_script
+
+    def apply(self, input_bundle: FTTransformSourceBundle, params: tuple[FTParamInstance, ...]) -> FTTransformSourceBundle:
+        output_bundle = FTTransformSourceBundle([], [], [])
+
+        div0Param = next((p for p in params if p.name == "DIV0"), None)
+        if div0Param is None:
+            logger.error("DIV0 parameter is required for gen_maxcut step.")
+            return output_bundle
+
+        sources = input_bundle.sources
+        for src in sources:
+            # we keep the sources as is
+            # this step is only used to generate the maxcut.h file from the source files if required
+            output_bundle.sources.append(src)
+
+            # if not a file, skip
+            if not src.is_file():
+                continue
+
+            cmd: list[str] = []
+            has_maxcut_command = False
+            # check if the files contains the maxcut command
+            with open(src, "r", encoding="utf-8") as f:
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    if "python3 gen_maxcut.py " in line:
+                        has_maxcut_command = True
+                        break
+            if not has_maxcut_command:
+                continue
+
+            with open(src, "r", encoding="utf-8") as f:
+                state = "search"
+                cmd_str = ""
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    if state == "search" and "python3 gen_maxcut.py " in line:
+                        state = "found"
+                        cmd_str = line.strip()
+                        continue
+
+                    if state == "found":
+                        if line.strip().startswith("*"):
+                            state = "end"
+                            break
+                        cmd_str += line.strip()
+                        continue
+                cmd = shlex.split(cmd_str)
+            
+            # filter cmd to remove any empty strings
+            cmd = [c for c in cmd if c.strip()]
+            # filter cmd to remove any blank lines
+            #filter cmd to remove backslashes
+            cmd = [c for c in cmd if c != "\\"]
+
+            # replace the gen_maxcut.py argv with the actual path to the script
+            for i, c in enumerate(cmd):
+                if c == "gen_maxcut.py":
+                    cmd[i] = str(self._gen_maxcut_script.absolute())
+                if c == "$DIV0":
+                    cmd[i] = str(div0Param.value)
+                if c == "--out":
+                    cmd[i + 1] = str(src.parent / "maxcut.h")
+
+            # print("Running maxcut command: ")
+            # print(cmd)
+            # print(" ".join(cmd))
+
+            # extract the maxcut command from the source file
+            proc = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+            # print(proc.stdout)
+            # print(proc.stderr)
+
+            output_file = Path("maxcut.h")
+
+            output_bundle.generated_files.append(output_file)
+            output_bundle.cleanup_files.append(output_file)
+
+            logger.debug(
+                "Generated maxcut header file '%s' from '%s'.",
+                output_file.absolute(),
+                src,
+            )
+        return output_bundle
 
 class FTRunBuilder:
     """Builder for FTRun instances.
@@ -1316,7 +1441,8 @@ class FTRunBuilder:
                     sources=sources,
                     generated_files=self._generated_files,
                     cleanup_files=cleanup_files,
-                )
+                ),
+                self._params
             )
             if output_bundle is None:
                 logger.error(
@@ -1375,9 +1501,6 @@ class FTExperiment:
                 if v >= min_value:
                     yield v
                 v <<= 1
-        
-   
-
 
         param_product_list: list[list[FTParamInstance]] = []
 
@@ -1389,10 +1512,7 @@ class FTExperiment:
             param_combinations = []
             for i in range(set_param_len):
                 param_combinations.append(
-                    [
-                        FTParamInstance(p.name, p.values[i])
-                        for p in set_parameters
-                    ]
+                    [FTParamInstance(p.name, p.values[i]) for p in set_parameters]
                 )
             return param_combinations
 
@@ -1409,7 +1529,7 @@ class FTExperiment:
                 param_product_list.append(
                     [FTParamInstance(param.name, v) for v in param.values]
                 )
-   
+
         dyn_params = [p for p in param_list if p.dynamic]
         if len(dyn_params) > 1:
             logger.error(
@@ -1447,6 +1567,10 @@ class FTExperiment:
             builder.add_transform(
                 FTRunBuilderInsertIncludes(options.additional_includes)
             )
+        
+        if options.gen_maxcut_script:
+            builder.add_transform(FTRunBuilderStepGenMaxcut(options.gen_maxcut_script))
+
 
         builder.compile(
             compiler_bin=options.compiler_binary,
@@ -1727,7 +1851,6 @@ class FTExperiment:
 
         param_instance_tuple_list = self._gen_param_instances(options.parameters)
 
-
         has_dyn_param = any(param.dynamic for param in options.parameters)
 
         param_name_list = [p for p in options.parameters if not p.dynamic]
@@ -1851,7 +1974,8 @@ class FTExperiment:
             .compile(
                 options.compiler_binary,
                 cflags=options.compiler_cflags,
-                extra_flags=options.compiler_extra_flags + options.output_dump_extra_flags,
+                extra_flags=options.compiler_extra_flags
+                + options.output_dump_extra_flags,
             )
             .build()
         )
@@ -1907,7 +2031,8 @@ class FTExperiment:
             builder = builder.compile(
                 compiler_bin=options.compiler_binary,
                 cflags=options.compiler_cflags,
-                extra_flags=options.compiler_extra_flags + options.output_dump_extra_flags,
+                extra_flags=options.compiler_extra_flags
+                + options.output_dump_extra_flags,
             )
             ftrun = builder.build()
 
