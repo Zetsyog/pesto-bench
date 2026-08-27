@@ -1,0 +1,13 @@
+{
+    "passes": [
+        { "uuid": "pluto", "options": { "identity": true, "tile": false, "parallel": false, "intratileopt": false, "silent": false } },
+        { "uuid": "skew", "transform": ["x = 2*t+i", "y = t+i", "z = 2*t+i+j"] },
+        { "uuid": "isl-tpz-tiling" },
+        {
+            "uuid": "clast-custom-vec-pragma",
+            "pragma": "GCC ivdep"
+        },
+        { "uuid": "codegen-cloog", "optFirstLevel": 8 }
+    ]
+}
+

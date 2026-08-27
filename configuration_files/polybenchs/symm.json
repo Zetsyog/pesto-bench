@@ -1,0 +1,11 @@
+{
+    "passes": [
+        { "uuid": "pluto", "options": { "tile": true, "parallel": true, "tile-sizes": [1,1,1,1], "identity": false, "intratileopt": true } },
+        { "uuid": "isl-tpz-tiling", "useMinVolume": true, "reductionTileAboveGap": true },
+        {
+            "uuid": "clast-custom-vec-pragma",
+            "pragma": "GCC ivdep"
+        },
+        { "uuid": "codegen-cloog", "optFirstLevel": 8 }
+    ]
+}
