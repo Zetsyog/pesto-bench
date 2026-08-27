@@ -14,6 +14,10 @@ PLUTO_DIR="$(pwd)/pluto"
 PLUTO_VERSION=0.13.0
 PLUTO_URL="https://github.com/bondhugula/pluto/releases/download/${PLUTO_VERSION}/pluto-${PLUTO_VERSION}.tgz"
 
+NPDP_DIR="$(pwd)/NPDP_bench"
+NPDP_GIT="https://github.com/Zetsyog/NPDP_Bench.git"
+NPDP_TAG="f75ad9df988443c462a576f68ae887f42913c936"
+
 ROOT_DIR="$(pwd)"
 
 ############################
@@ -66,11 +70,25 @@ function fetch_pluto() {
 		make -j
 	)
 }
+
+function fetch_npdp_bench() {
+	if [ -d "${NPDP_DIR}" ]; then
+		echo "NPDP_Bench already fetched. Skipping."
+		return
+	fi
+	git clone "$NPDP_GIT" NPDP_bench
+	cd "${NPDP_DIR}" || exit
+	git checkout "$NPDP_TAG"
+}
+
 echo "Fetching dependencies..."
 echo "Fetching pesto..."
 fetch_pesto
-echo "Pesto fetched."
+echo "done."
 echo "Fetching pluto..."
 fetch_pluto
-echo "Pluto fetched."
+echo "done."
+echo "Fetching NPDP_Bench..."
+fetch_npdp_bench
+echo "done."
 echo "Submodules fetched."
