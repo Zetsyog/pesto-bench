@@ -47,6 +47,8 @@ LOG_DIR="./results/pluto_all/$(date +%Y-%m-%d)/"
 mkdir -p "${LOG_DIR}"
 
 CFLAGS="-march=native -O3 -fopenmp"
+PLUTO_FLAGS="--tile --parallel --diamond-tile --nounroll --prevector"
+PLUTO_VEC_PRAGMA="#pragma GCC ivdep"
 
 EXTRA_FLAGS="-lm -DN=2000 -DMETRICS_TIME"
 
@@ -76,7 +78,7 @@ for benchmark in "${ALL_BENCHMARKS[@]}"; do
             --timeout 5
             --param T0 "[2,512,pow2]"
             --param T1 "[2,512,pow2]"
-            --param T3 "[2,512,pow2]"
+            --param T2 "[2,512,pow2]"
             --perf-nrun 5
             --perf-nmedianrun 3
         )
