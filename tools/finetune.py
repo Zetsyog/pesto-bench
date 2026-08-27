@@ -1291,15 +1291,17 @@ class FTRunBuilderStepGenMaxcut(FTRunBuilderTransform):
                         break
                     if state == "search" and "python3 gen_maxcut.py " in line:
                         state = "found"
-                        cmd_str = line.strip()
+                        cmd_str = line
                         continue
 
                     if state == "found":
                         if line.strip().startswith("*"):
                             state = "end"
                             break
-                        cmd_str += line.strip()
+                        cmd_str += line
                         continue
+                if "$((DIV0 * 2))" in cmd_str:
+                    cmd_str = cmd_str.replace("$((DIV0 * 2))", str(div0Param.value * 2))
                 cmd = shlex.split(cmd_str)
             
             # filter cmd to remove any empty strings
@@ -1312,8 +1314,8 @@ class FTRunBuilderStepGenMaxcut(FTRunBuilderTransform):
             for i, c in enumerate(cmd):
                 if c == "gen_maxcut.py":
                     cmd[i] = str(self._gen_maxcut_script.absolute())
-                if c == "$DIV0":
-                    cmd[i] = str(div0Param.value)
+                if "$DIV0" in c:
+                    cmd[i] = c.replace("$DIV0", str(div0Param.value))
                 if c == "--out":
                     cmd[i + 1] = str(src.parent / "maxcut.h")
 
@@ -1331,6 +1333,14 @@ class FTRunBuilderStepGenMaxcut(FTRunBuilderTransform):
             )
             # print(proc.stdout)
             # print(proc.stderr)
+
+            if proc.returncode != 0:
+                logger.error(
+                    "Failed to call gen_maxcut '%s': %s",
+                    " ".join(cmd),
+                    proc.stdout.strip() + "\n" + proc.stderr.strip(),
+                )
+                return FTTransformSourceBundle([], [], [])
 
             output_file = Path("maxcut.h")
 
